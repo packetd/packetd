@@ -1,0 +1,17 @@
+# IDE
+*.DS_Store
+.idea/
+.vscode/
+build.yml
+dist/
+
+go.work
+go.work.sum
+
+*_tmp
+.idea
+.vscode
+
+packetd
+./dev.sh
+roundtrips.log

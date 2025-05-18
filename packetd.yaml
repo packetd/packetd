@@ -1,0 +1,124 @@
+
+server:
+  enabled: true
+  address: ":9091"
+  timeout: 1m
+  pprof: true
+
+logger:
+  level: "info"
+
+controller:
+  layer4Metrics:
+    enabled: true
+    requiredLabels:
+#      - "source.host"
+#      - "source.port"
+#      - "destination.host"
+#      - "destination.port"
+
+sniffer.ifaces: 'any'
+sniffer.engine: pcap # or xdp
+sniffer.ipv4Only: true
+
+sniffer.protocols:
+  rules:
+#    - name: "redis"
+#      protocol: "redis"
+#      port: 6379
+
+    - name: "http-example"
+      protocol: "http"
+      port: 8083
+##
+#    - name: "mysql"
+#      protocol: "mysql"
+#      port: 3306
+
+#    - name: "grpc"
+#      protocol: "grpc"
+#      port: 8085
+#
+#    - name: dns
+#      protocol: "dns"
+#      port: 53
+
+#    - name: mongodb
+#      protocol: "mongodb"
+#      port: 27017
+
+#    - name: "postgresql"
+#      protocol: "postgresql"
+#      port: 5432
+
+#    - name: "kafka"
+#      protocol: "kafka"
+#      port: 9092
+
+    - name: amqp
+      protocol: "amqp"
+      port: 5672
+
+processor:
+  - name: roundtripstometrics
+    config:
+      http:
+        requireLabels:
+          - "server.host"
+          - "server.port"
+          - "request.method"
+          - "request.path"
+          - "response.status_code"
+
+      kafka:
+        requireLabels:
+          - request.api
+
+      amqp:
+        requireLabels:
+          - "request.class"
+          - "request.method"
+
+  - name: roundtripstotraces
+    config:
+
+#  - name: roundtripsfilter
+#    config:
+
+pipeline:
+  - name: "traces/common"
+    processors:
+      - roundtripstotraces
+
+  - name: "metrics/common"
+    processors:
+      - roundtripstometrics
+
+metricsStorage:
+  enabled: true
+  expired: 5m
+  vmHistogram: true
+
+exporter:
+  traces:
+    enabled: false
+    endpoint: http://172.16.22.1:4318/v1/traces
+    batch: 10
+    interval: 3s
+    header:
+      "X-BK-TOKEN": "Ymtia2JrYmtia2JrYmtiaxUtdLzrldhHtlcjc1Cwfo1u99rVk5HGe8EjT761brGtKm3H4Ran78rWl85HwzfRgw=="
+
+  metrics:
+    enabled: false
+    endpoint: http://172.16.22.1:4318/prometheus/write
+    interval: 1m
+    header:
+      X-BK-TOKEN: "Ymtia2JrYmtia2JrYmtiaxUtdLzrldhHtlcjc1Cwfo1u99rVk5HGe8EjT761brGtKm3H4Ran78rWl85HwzfRgw=="
+
+  roundtrips:
+    enabled: false
+    console: true
+    filename: "roundtrips.log"
+    maxSize: 100
+    maxBackups: 10
+    maxAge: 30
