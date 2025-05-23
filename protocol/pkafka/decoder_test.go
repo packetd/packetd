@@ -750,7 +750,7 @@ func TestDecodeStringType(t *testing.T) {
 			input:    []byte{0xFF, 0xFF},
 			nullable: true,
 			s:        "",
-			offset:   2,
+			offset:   0,
 		},
 		{
 			name:     "NullStringWithNullableFalse",

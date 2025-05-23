@@ -115,6 +115,7 @@ func TestChannelDecoderRequest(t *testing.T) {
 					Class:  "Channel",
 					Method: "Close",
 				},
+				Packet: &Packet{},
 			},
 		},
 		{
@@ -817,6 +818,7 @@ func TestChannelDecoderResponse(t *testing.T) {
 					Class:  "Connection",
 					Method: "Close",
 				},
+				Packet: &Packet{},
 			},
 		},
 		{

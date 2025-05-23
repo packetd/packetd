@@ -82,6 +82,7 @@ func TestDecoderDecode(t *testing.T) {
 							Class:  "Connection",
 							Method: "Start",
 						},
+						ErrCode: "OK",
 					},
 				},
 				{
@@ -95,6 +96,7 @@ func TestDecoderDecode(t *testing.T) {
 							Class:  "Connection",
 							Method: "Start",
 						},
+						ErrCode: "OK",
 					},
 				},
 				{
@@ -108,6 +110,7 @@ func TestDecoderDecode(t *testing.T) {
 							Class:  "Channel",
 							Method: "Open",
 						},
+						ErrCode: "OK",
 					},
 				},
 				{
@@ -121,6 +124,7 @@ func TestDecoderDecode(t *testing.T) {
 							Class:  "Channel",
 							Method: "Open",
 						},
+						ErrCode: "OK",
 					},
 				},
 			},

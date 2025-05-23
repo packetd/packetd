@@ -17,6 +17,8 @@ package libpcap
 
 import (
 	"context"
+	"net"
+	"regexp"
 	"sync"
 	"time"
 
