@@ -20,6 +20,7 @@ controller:
 sniffer.ifaces: 'any'
 sniffer.engine: pcap # or xdp
 sniffer.ipv4Only: true
+sniffer.file: "/tmp/apm-worker.pcap"
 
 sniffer.protocols:
   rules:
@@ -29,7 +30,7 @@ sniffer.protocols:
 
     - name: "http-example"
       protocol: "http"
-      port: 8083
+      port: 9200
 ##
 #    - name: "mysql"
 #      protocol: "mysql"
@@ -51,9 +52,9 @@ sniffer.protocols:
 #      protocol: "postgresql"
 #      port: 5432
 
-#    - name: "kafka"
-#      protocol: "kafka"
-#      port: 9092
+    - name: "kafka"
+      protocol: "kafka"
+      port: 9092
 
     - name: amqp
       protocol: "amqp"
@@ -102,22 +103,18 @@ metricsStorage:
 exporter:
   traces:
     enabled: false
-    endpoint: http://172.16.22.1:4318/v1/traces
+    endpoint: http://localhost:4318/v1/traces
     batch: 10
     interval: 3s
-    header:
-      "X-BK-TOKEN": "Ymtia2JrYmtia2JrYmtiaxUtdLzrldhHtlcjc1Cwfo1u99rVk5HGe8EjT761brGtKm3H4Ran78rWl85HwzfRgw=="
 
   metrics:
     enabled: false
-    endpoint: http://172.16.22.1:4318/prometheus/write
+    endpoint: http://localhost:4318/prometheus/write
     interval: 1m
-    header:
-      X-BK-TOKEN: "Ymtia2JrYmtia2JrYmtiaxUtdLzrldhHtlcjc1Cwfo1u99rVk5HGe8EjT761brGtKm3H4Ran78rWl85HwzfRgw=="
 
   roundtrips:
-    enabled: false
-    console: true
+    enabled: true
+    console: false
     filename: "roundtrips.log"
     maxSize: 100
     maxBackups: 10

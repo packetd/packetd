@@ -29,6 +29,7 @@ import (
 )
 
 type logCmdConfig struct {
+	File       string
 	Ifaces     string
 	IPv4Only   bool
 	LogFile    string
@@ -80,6 +81,7 @@ logger:
 
 sniffer:
   ifaces: {{ .Ifaces }}
+  file: {{ .File }}
   ipv4Only: {{ .IPv4Only }}
   protocols:
     rules:
@@ -108,6 +110,7 @@ exporter:
 
 	var buf bytes.Buffer
 	err = tpl.Execute(&buf, map[string]interface{}{
+		"File":       c.File,
 		"Ifaces":     c.Ifaces,
 		"IPv4Only":   c.IPv4Only,
 		"Protos":     c.decodeProtoConfig(),
@@ -149,6 +152,7 @@ var logCmd = &cobra.Command{
 }
 
 func init() {
+	logCmd.Flags().StringVar(&logConfig.File, "file", "", "Path to pcap file to read from")
 	logCmd.Flags().StringVar(&logConfig.Ifaces, "ifaces", "any", "Network interfaces to monitor (supports regex), 'any' for all interfaces")
 	logCmd.Flags().StringSliceVar(&logConfig.Protocols, "proto", nil, "Protocols to capture in 'protocol;port[;host]' format, comma-separated for multiple")
 	logCmd.Flags().BoolVar(&logConfig.IPv4Only, "ipv4", false, "Capture IPv4 traffic only")

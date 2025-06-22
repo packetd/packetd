@@ -13,5 +13,5 @@ go.work.sum
 .vscode
 
 packetd
-./dev.sh
+dev.sh
 roundtrips.log

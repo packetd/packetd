@@ -15,4 +15,4 @@ test:
 
 .PHONY: license
 license:
-	find ./ -type f \( -iname \*.go -o -iname \*.sh \) | xargs addlicense -v -f license.txt
+	find ./ -type f \( -iname \*.go -o -iname \*.sh \) | xargs addlicense -v -f LICENSE

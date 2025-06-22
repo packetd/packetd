@@ -23,6 +23,7 @@ import (
 )
 
 type Config struct {
+	File      string    `config:"file"`
 	Ifaces    string    `config:"ifaces"`
 	Engine    string    `config:"engine"`
 	IPv4Only  bool      `config:"ipv4Only"`
