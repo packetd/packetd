@@ -17,6 +17,7 @@ package libpcap
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"regexp"
 	"sync"
@@ -37,6 +38,7 @@ func init() {
 }
 
 type handler struct {
+	name   string
 	handle *pcap.Handle
 }
 
@@ -89,6 +91,19 @@ func (ps *pcapSniffer) makeHandlers() error {
 		return err
 	}
 
+	if len(ps.conf.File) > 0 {
+		tp, err := makeFileHandle(ps.conf.File, bpfFilter)
+		if err != nil {
+			return err
+		}
+		ps.handlers = append(ps.handlers, &handler{
+			name:   fmt.Sprintf("pcap.file: %s", ps.conf.File),
+			handle: tp,
+		})
+		logger.Infof("sniffer add pcap file (%s)", ps.conf.File)
+		return nil
+	}
+
 	for _, iface := range ifaces {
 		tp, err := ps.getHandle(iface.Name, bpfFilter)
 		if err != nil {
@@ -96,7 +111,10 @@ func (ps *pcapSniffer) makeHandlers() error {
 			continue
 		}
 
-		ps.handlers = append(ps.handlers, &handler{handle: tp})
+		ps.handlers = append(ps.handlers, &handler{
+			name:   fmt.Sprintf("pcap.device: %s", iface.Name),
+			handle: tp,
+		})
 		logger.Infof("sniffer add device (%s), address=%v", iface.Name, ifaceAddress(iface))
 	}
 
@@ -162,6 +180,7 @@ func (ps *pcapSniffer) listen(ph *handler) {
 		select {
 		case packet, ok := <-packetSource.Packets():
 			if !ok {
+				logger.Infof("pcap handle (%s) closed", ph.name)
 				return
 			}
 			ps.parsePacket(packet)

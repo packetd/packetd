@@ -19,11 +19,6 @@ function push() {
   rsync -avz --delete --exclude='.idea/' --exclude='.git/' ../packetd fedora:/root/projects/golang/
 }
 
-function pull() {
-  rsync fedora:/root/projects/golang/packetd/sniffer/libebpf/*bpfe* ./sniffer/libebpf/
-}
-
-
 function run() {
   go build . && ./packetd agent --config ./packetd.yaml
 }

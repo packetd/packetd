@@ -17,6 +17,9 @@ import (
 	"net"
 	"time"
 
+	"github.com/gopacket/gopacket/pcap"
+	"github.com/pkg/errors"
+
 	"github.com/packetd/packetd/common/socket"
 )
 
@@ -77,4 +80,18 @@ func ifaceAddress(iface net.Interface) []string {
 		s = append(s, addr.String())
 	}
 	return s
+}
+
+func makeFileHandle(path, bpfFilter string) (*pcap.Handle, error) {
+	handle, err := pcap.OpenOffline(path)
+	if err != nil {
+		return nil, err
+	}
+	if bpfFilter != "" {
+		if err := handle.SetBPFFilter(bpfFilter); err != nil {
+			handle.Close()
+			return nil, errors.Wrapf(err, "set bpf-filter (%s) failed", bpfFilter)
+		}
+	}
+	return handle, nil
 }

@@ -15,9 +15,11 @@ package libpcap
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"regexp"
 	"sync"
+	"time"
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/afpacket"
@@ -38,6 +40,7 @@ func init() {
 type handler struct {
 	name   string
 	handle *afpacket.TPacket
+	pfile  *pcap.Handle
 }
 
 type pcapSniffer struct {
@@ -87,6 +90,19 @@ func (ps *pcapSniffer) makeHandlers() error {
 	bpfFilter, err := ps.conf.Protocols.CompileBPFFilter()
 	if err != nil {
 		return err
+	}
+
+	if len(ps.conf.File) > 0 {
+		tp, err := makeFileHandle(ps.conf.File, bpfFilter)
+		if err != nil {
+			return err
+		}
+		ps.handlers = append(ps.handlers, &handler{
+			name:  fmt.Sprintf("pcap.file: %s", ps.conf.File),
+			pfile: tp,
+		})
+		logger.Infof("sniffer add pcap file (%s)", ps.conf.File)
+		return nil
 	}
 
 	for _, iface := range ifaces {
@@ -140,7 +156,45 @@ func (ps *pcapSniffer) setBPFFilter(tp *afpacket.TPacket, filter string) error {
 	return tp.SetBPF(bpfIns)
 }
 
+func (ps *pcapSniffer) parsePacket(pkt []byte, ts time.Time) {
+	payload, lyr, err := sniffer.DecodeIPLayer(pkt, ps.conf.IPv4Only)
+	if err != nil || lyr == nil {
+		return
+	}
+
+	var tcpPkt layers.TCP
+	err = tcpPkt.DecodeFromBytes(payload, gopacket.NilDecodeFeedback)
+	if err == nil {
+		if l4pkt := sniffer.ParseTCPPacket(ts, lyr, &tcpPkt); l4pkt != nil {
+			if ps.onL4Packet != nil {
+				ps.onL4Packet(l4pkt)
+			}
+		}
+		return
+	}
+
+	var udpPkt layers.UDP
+	err = udpPkt.DecodeFromBytes(payload, gopacket.NilDecodeFeedback)
+	if err != nil {
+		return
+	}
+	if l4pkt := sniffer.ParseUDPDatagram(ts, lyr, &udpPkt); l4pkt != nil {
+		if ps.onL4Packet != nil {
+			ps.onL4Packet(l4pkt)
+		}
+	}
+}
+
 func (ps *pcapSniffer) listen(ph *handler) {
+	if ph.pfile != nil {
+		ps.listenPcapFile(ph)
+		return
+	}
+
+	ps.listenAfPacket(ph)
+}
+
+func (ps *pcapSniffer) listenAfPacket(ph *handler) {
 	ps.wg.Add(1)
 	defer ps.wg.Done()
 
@@ -160,33 +214,27 @@ func (ps *pcapSniffer) listen(ph *handler) {
 				}
 				continue
 			}
+			ps.parsePacket(pkt, ci.Timestamp)
+		}
+	}
+}
 
-			payload, lyr, err := sniffer.DecodeIPLayer(pkt, ps.conf.IPv4Only)
-			if err != nil || lyr == nil {
-				continue
-			}
+func (ps *pcapSniffer) listenPcapFile(ph *handler) {
+	ps.wg.Add(1)
+	defer ps.wg.Done()
 
-			var tcpPkt layers.TCP
-			err = tcpPkt.DecodeFromBytes(payload, gopacket.NilDecodeFeedback)
-			if err == nil {
-				if l4pkt := sniffer.ParseTCPPacket(ci.Timestamp, lyr, &tcpPkt); l4pkt != nil {
-					if ps.onL4Packet != nil {
-						ps.onL4Packet(l4pkt)
-					}
-				}
-				continue
-			}
+	packetSource := gopacket.NewPacketSource(ph.pfile, ph.pfile.LinkType())
+	packetSource.Lazy = true
+	packetSource.NoCopy = true
 
-			var udpPkt layers.UDP
-			err = udpPkt.DecodeFromBytes(payload, gopacket.NilDecodeFeedback)
-			if err != nil {
-				continue
+	for {
+		select {
+		case packet, ok := <-packetSource.Packets():
+			if !ok {
+				logger.Infof("pcap handle (%s) closed", ph.name)
+				return
 			}
-			if l4pkt := sniffer.ParseUDPDatagram(ci.Timestamp, lyr, &udpPkt); l4pkt != nil {
-				if ps.onL4Packet != nil {
-					ps.onL4Packet(l4pkt)
-				}
-			}
+			ps.parsePacket(packet.Data(), time.Now())
 		}
 	}
 }
