@@ -19,18 +19,18 @@ controller:
 
 sniffer.ifaces: 'any'
 sniffer.engine: pcap # or xdp
-sniffer.ipv4Only: true
-sniffer.file: "/tmp/apm-worker.pcap"
+sniffer.ipv4Only: false
+#sniffer.file: "/tmp/apm-worker.pcap"
 
 sniffer.protocols:
   rules:
-#    - name: "redis"
-#      protocol: "redis"
-#      port: 6379
-
-    - name: "http-example"
-      protocol: "http"
-      port: 9200
+    - name: "redis"
+      protocol: "redis"
+      port: 6379
+#
+#    - name: "http-example"
+#      protocol: "http"
+#      port: 80
 ##
 #    - name: "mysql"
 #      protocol: "mysql"
@@ -52,13 +52,13 @@ sniffer.protocols:
 #      protocol: "postgresql"
 #      port: 5432
 
-    - name: "kafka"
-      protocol: "kafka"
-      port: 9092
-
-    - name: amqp
-      protocol: "amqp"
-      port: 5672
+#    - name: "kafka"
+#      protocol: "kafka"
+#      port: 9092
+#
+#    - name: amqp
+#      protocol: "amqp"
+#      port: 5672
 
 processor:
   - name: roundtripstometrics
@@ -113,8 +113,8 @@ exporter:
     interval: 1m
 
   roundtrips:
-    enabled: true
-    console: false
+    enabled: false
+    console: true
     filename: "roundtrips.log"
     maxSize: 100
     maxBackups: 10
