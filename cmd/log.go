@@ -110,6 +110,7 @@ exporter:
 
 	var buf bytes.Buffer
 	err = tpl.Execute(&buf, map[string]interface{}{
+		"File":       c.File,
 		"Ifaces":     c.Ifaces,
 		"IPv4Only":   c.IPv4Only,
 		"Protos":     c.decodeProtoConfig(),
