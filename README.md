@@ -164,6 +164,15 @@ http_requests_total{server_port="8083",method="GET",path="/benchmark",status_cod
 
 ### Redis
 
+```shell
+root@localhost:~/projects/golang/packetd-benchmark/redis/client# ./client -cmd ping -total 100000 -workers 10
+...
+2025/06/22 17:54:26 Total 100000 requests take 1.057603411s, qps=94553.401549, bps=738.7Mib
+
+curl -s  localhost:9091/protocol/metrics | grep total
+redis_request_total{} 100010.000000
+```
+
 ## License
 
 Apache [©packetd](https://github.com/packetd/packetd/blob/master/LICENSE)

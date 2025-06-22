@@ -14,6 +14,7 @@
 package sniffer
 
 import (
+	"runtime"
 	"time"
 
 	"github.com/gopacket/gopacket"
@@ -190,25 +191,19 @@ func DecodeIPLayer(b []byte, ipv4Only bool) ([]byte, gopacket.Layer, error) {
 	// 1) Ethernet Layer
 	// 2) IP Layer
 	// 3) TCP/UDP Layer
-	var ether layers.Ethernet
-	if err := ether.DecodeFromBytes(b, gopacket.NilDecodeFeedback); err != nil {
+	content, err := decodeIPLayer(b)
+	if err != nil {
 		return nil, nil, err
 	}
 
-	switch ether.EthernetType {
-	case layers.EthernetTypeIPv4, layers.EthernetTypeIPv6:
-	default:
-		return nil, nil, nil
-	}
-
-	if err := ipv4.DecodeFromBytes(ether.Payload, gopacket.NilDecodeFeedback); err == nil {
+	if err := ipv4.DecodeFromBytes(content, gopacket.NilDecodeFeedback); err == nil {
 		payload = ipv4.Payload
 		lyr = &ipv4
 	}
 
 	// 支持只监听 ipv4 的网卡 IP
 	if len(payload) == 0 && !ipv4Only {
-		if err := ipv6.DecodeFromBytes(ether.Payload, gopacket.NilDecodeFeedback); err == nil {
+		if err := ipv6.DecodeFromBytes(content, gopacket.NilDecodeFeedback); err == nil {
 			payload = ipv6.Payload
 			lyr = &ipv6
 		}
@@ -219,4 +214,23 @@ func DecodeIPLayer(b []byte, ipv4Only bool) ([]byte, gopacket.Layer, error) {
 	}
 
 	return payload, lyr, nil
+}
+
+func decodeIPLayer(b []byte) ([]byte, error) {
+	var err error
+	var ether layers.Ethernet
+	if err = ether.DecodeFromBytes(b, gopacket.NilDecodeFeedback); err == nil {
+		switch ether.EthernetType {
+		case layers.EthernetTypeIPv4, layers.EthernetTypeIPv6:
+			return ether.Payload, nil
+		}
+	}
+
+	if runtime.GOOS != "linux" && runtime.GOOS != "windows" {
+		var lb layers.Loopback
+		if err = lb.DecodeFromBytes(b, gopacket.NilDecodeFeedback); err == nil {
+			return lb.Payload, nil
+		}
+	}
+	return nil, err
 }
