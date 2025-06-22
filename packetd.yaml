@@ -20,7 +20,7 @@ controller:
 sniffer.ifaces: 'any'
 sniffer.engine: pcap # or xdp
 sniffer.ipv4Only: true
-sniffer.file: "/Users/chenjiandongx/Downloads/apm-worker.pcap"
+sniffer.file: "/tmp/apm-worker.pcap"
 
 sniffer.protocols:
   rules:
