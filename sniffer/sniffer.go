@@ -182,11 +182,6 @@ func parsePacket(ts time.Time, lyrs ...gopacket.Layer) socket.L4Packet {
 //
 // 返回数据包 Payload 以及所处 Layer
 func DecodeIPLayer(b []byte, ipv4Only bool) ([]byte, gopacket.Layer, error) {
-	var lyr gopacket.Layer
-	var payload []byte
-	var ipv4 layers.IPv4
-	var ipv6 layers.IPv6
-
 	// decode packets followed by layers
 	// 1) Ethernet Layer
 	// 2) IP Layer
@@ -195,6 +190,11 @@ func DecodeIPLayer(b []byte, ipv4Only bool) ([]byte, gopacket.Layer, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+
+	var lyr gopacket.Layer
+	var payload []byte
+	var ipv4 layers.IPv4
+	var ipv6 layers.IPv6
 
 	if err := ipv4.DecodeFromBytes(content, gopacket.NilDecodeFeedback); err == nil {
 		payload = ipv4.Payload
@@ -216,6 +216,9 @@ func DecodeIPLayer(b []byte, ipv4Only bool) ([]byte, gopacket.Layer, error) {
 	return payload, lyr, nil
 }
 
+// decodeIPLayer 解析 IP 层协议
+//
+// OpenBSD style 系统需要额外判断处理 loopback 网卡
 func decodeIPLayer(b []byte) ([]byte, error) {
 	var err error
 	var ether layers.Ethernet

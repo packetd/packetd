@@ -1,8 +1,12 @@
 # packetd
 
-packetd 是一个基于 `libpcap` 的聚焦于应用层协议网络数据包观测工具，可以从数据流中解析出应用协议，以 ***RoundTrip* 作为其核心概念，即请求的来回。
+packetd 是一个基于 `libpcap` 的聚焦于应用层协议网络数据观测工具。
 
-packetd 提供了更加现代化的可观测手段，如 Prometheus/VictoriaMetrics/OpenTelemetry，可通过 HTTP 请求将 Metrics/Traces 数据发送至 Prometheus/OT-Collector 进行持久化存储。 
+packetd 支持从数据流中解析出应用协议，以请求的来回，即 ***RoundTrip* 作为其核心概念。于此同时 packetd 提供了更加现代化的可观测手段，如：
+
+- 支持 Prometheus RemoteWrite 协议上报 Metrics 数据。
+- 支持 OpenTelemetry 协议上报 Traces 数据。
+- 支持 VictoriaMetrics VmRange Histogram，无需提前定义 bucket。
 
 ## Installation
 
@@ -32,9 +36,15 @@ Flags:
 Use "packetd [command] --help" for more information about a command.
 ```
 
-### agent mode
+### agent-mode
 
-## log mode
+agent 模式以守护进程模式运行，所有配置均在配置文件中声明。
+
+```shell
+$ packetd agent --config packetd.yaml
+```
+
+### log-mode
 
 ```shell
 $ packetd log --ifaces any  --proto 'http;80'
@@ -48,12 +58,8 @@ cat roundtrips.log | jq .
     "Port": 36418,
     "Method": "GET",
     "Header": {
-      "Accept": [
-        "*/*"
-      ],
-      "User-Agent": [
-        "curl/7.61.1"
-      ]
+      "Accept": ["*/*"],
+      "User-Agent": ["curl/7.61.1"]
     },
     "Proto": "HTTP/1.1",
     "Path": "/",
@@ -68,36 +74,16 @@ cat roundtrips.log | jq .
   "Response": {
     "Port": 80,
     "Header": {
-      "Accept-Ranges": [
-        "bytes"
-      ],
-      "Cache-Control": [
-        "max-age=86400"
-      ],
-      "Connection": [
-        "Keep-Alive"
-      ],
-      "Content-Length": [
-        "81"
-      ],
-      "Content-Type": [
-        "text/html"
-      ],
-      "Date": [
-        "Sun, 22 Jun 2025 08:01:41 GMT"
-      ],
-      "Etag": [
-        "\"51-47cf7e6ee8400\""
-      ],
-      "Expires": [
-        "Mon, 23 Jun 2025 08:01:41 GMT"
-      ],
-      "Last-Modified": [
-        "Tue, 12 Jan 2010 13:48:00 GMT"
-      ],
-      "Server": [
-        "Apache"
-      ]
+      "Accept-Ranges": ["bytes"],
+      "Cache-Control": ["max-age=86400"],
+      "Connection": ["Keep-Alive"],
+      "Content-Length": ["81"],
+      "Content-Type": ["text/html"],
+      "Date": ["Sun, 22 Jun 2025 08:01:41 GMT"],
+      "Etag": ["\"51-47cf7e6ee8400\""],
+      "Expires": ["Mon, 23 Jun 2025 08:01:41 GMT"],
+      "Last-Modified": ["Tue, 12 Jan 2010 13:48:00 GMT"],
+      "Server": ["Apache"]
     },
     "Status": "200 OK",
     "StatusCode": 200,
