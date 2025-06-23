@@ -1,1 +1,118 @@
 # packetd.reference.yaml
+# This is the reference configuration for packetd.
+
+# ======== logger configuration ========
+#
+# Default: false
+# stdout 是否输出到标准输出 与 file 选项互斥
+logger.stdout: false
+
+# Default: 'info'
+# level 日志级别 可选项 debug, info, warn, error
+logger.level: info
+
+# Default: 'packetd.log'
+# filename 日志文件完整路径名
+logger.filename: 'packetd.log'
+
+# Default: 100(MB)
+# maxSize 单日志文件最大大小
+logger.maxSize: 100
+
+# Default: 7(Days)
+# maxAge 日志文件保留天数
+logger.maxAge: 7
+
+# Default: 10
+# maxBackups 日志文件备份数量
+logger.maxBackups: 10
+
+
+# ======== sniffer configuration ========
+#
+# Default: ''
+# ifaces 指定监听的网卡 与 tcpdump 的 -i 参数一致
+sniffer.ifaces: 'any'
+
+# Default: 'pcap'
+# engine 指定监听引擎 目前仅支持 pcap
+sniffer.engine: pcap
+
+# Default: false
+# ipv4Only 是否只监听 ipv4 地址的网卡
+sniffer.ipv4Only: false
+
+# Default: None
+# protocols.rules 声明解析协议以及端口 使用列表允许同时指定多个协议
+#  - name: 规则名称
+#  - protocol: 协议名称
+#  - port: 端口号
+sniffer.protocols:
+  rules:
+#    - name: "redis-example"
+#      protocol: "redis"
+#      port: 6379
+#
+#    - name: "http-example"
+#      protocol: "http"
+#      port: 80
+
+# Default: ''
+# file 指定是否从文件中加载网络包 与监听网卡选项互斥
+sniffer.file: ''
+
+
+# ======== server configuration ========
+#
+# Default: false
+# enabled 是否启动 HTTP 服务
+server.enabled: false
+
+# Default: '9091'
+# address HTTP 服务地址
+server.address: ":9091"
+
+# Default: 1m
+# timeout HTTP 服务超时时间
+server.timeout: 1m
+
+# Default: false
+# pprof 是否开启 pprof
+server.pprof: true
+
+
+# ======== controller configuration ========
+#
+controller.layer4Metrics:
+  # Default: false
+  # enabled 是否上报 Layer4 指标
+  enabled: false
+
+  # Default: []
+  # requiredLabels 上报 Layer4 指标所需的标签
+  #
+  # labels mapping:
+  # source.host => src_host
+  # source.port => src_port
+  # destination.host => dst_host
+  # destination.port => dst_port
+  requiredLabels:
+    - "source.host"
+    - "source.port"
+    - "destination.host"
+    - "destination.port"
+
+
+# ======== metricsStorage configuration ========
+#
+# Default: false
+# enabled 是否启用指标存储 /metrics 上报以及 roundtripstometrics 均需要用到
+metricsStorage.enabled:
+
+# Default: 5m
+# expired 指标存储过期时间
+metricsStorage.expired: 5m
+
+# Default: false
+# vmHistogram 是否使用 vmhistogram 即 vmrange 特性
+metricsStorage.vmHistogram: false

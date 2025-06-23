@@ -28,6 +28,7 @@ import (
 	"github.com/packetd/packetd/internal/labels"
 	"github.com/packetd/packetd/internal/metricstorage"
 	"github.com/packetd/packetd/internal/wait"
+	"github.com/packetd/packetd/logger"
 	"github.com/packetd/packetd/pipeline"
 	"github.com/packetd/packetd/protocol"
 	"github.com/packetd/packetd/server"
@@ -58,9 +59,31 @@ type Controller struct {
 	pools map[socket.L7Proto]protocol.ConnPool
 }
 
+func setupLogger(conf *confengine.Config) error {
+	var opts logger.Options
+	if err := conf.UnpackChild("logger", &opts); err != nil {
+		return err
+	}
+
+	if opts.Filename == "" {
+		opts.Filename = "packetd.log"
+	}
+	if opts.MaxBackups <= 0 {
+		opts.MaxBackups = 10
+	}
+	if opts.MaxAge <= 0 {
+		opts.MaxAge = 7
+	}
+	if opts.MaxSize <= 0 {
+		opts.MaxSize = 100
+	}
+
+	logger.SetOptions(opts)
+	return nil
+}
+
 func New(conf *confengine.Config) (*Controller, error) {
-	var cfg Config
-	if err := conf.UnpackChild("controller", &cfg); err != nil {
+	if err := setupLogger(conf); err != nil {
 		return nil, err
 	}
 
@@ -102,6 +125,10 @@ func New(conf *confengine.Config) (*Controller, error) {
 		}
 	}
 
+	var cfg Config
+	if err := conf.UnpackChild("controller", &cfg); err != nil {
+		return nil, err
+	}
 	roundtrips := make(chan socket.RoundTrip, common.Concurrency())
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Controller{
