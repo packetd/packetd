@@ -108,6 +108,8 @@ packetd 除了支持从网卡直接捕获网络数据，还支持加载 pcap 文
 $ packetd log --pcap.file /tmp/app.pcap
 ```
 
+## Configuration
+
 ## Protocol
 
 支持的协议列表，参见 [./protocol](./protocol)
@@ -140,6 +142,11 @@ $ packetd log --pcap.file /tmp/app.pcap
 |-------| -------- | ------- |----------|-------|-------------------|--------------| --- |
 | Redis | 100000 | 10 | 0s     | 0KB   | Ping | 94553.401549 | 738.7Mib |
 
+
+## Roadmap
+- 支持 stats 模式
+- 内置 web 可视化方案
+- kubernetes 部署支持
 
 // TODO: 待补充
 

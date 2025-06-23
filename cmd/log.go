@@ -29,6 +29,7 @@ import (
 )
 
 type logCmdConfig struct {
+	Console    bool
 	File       string
 	Ifaces     string
 	IPv4Only   bool
@@ -100,7 +101,7 @@ exporter:
   traces:
   roundtrips:
     enabled: true
-    console: false
+    console: {{ .Console }}
     filename: {{ .LogFile }}
     maxSize: {{ .LogSize }}
     maxBackups: {{ .LogBackups }}
@@ -114,6 +115,7 @@ exporter:
 	var buf bytes.Buffer
 	err = tpl.Execute(&buf, map[string]interface{}{
 		"File":       c.File,
+		"Console":    c.Console,
 		"Ifaces":     c.Ifaces,
 		"IPv4Only":   c.IPv4Only,
 		"Protos":     c.decodeProtoConfig(),
@@ -152,10 +154,11 @@ var logCmd = &cobra.Command{
 		<-sigs.Terminate()
 		ctr.Stop()
 	},
-	Example: "# packetd log --proto http;80,8080; --proto dns;53 --iface any --log.file roundtrips.log",
+	Example: "# packetd log --proto 'http;80,8080'; --proto 'dns;53' --iface any --console",
 }
 
 func init() {
+	logCmd.Flags().BoolVar(&logConfig.Console, "console", false, "Enable console logging")
 	logCmd.Flags().StringVar(&logConfig.File, "pcap.file", "", "Path to pcap file to read from")
 	logCmd.Flags().StringVar(&logConfig.Ifaces, "ifaces", "any", "Network interfaces to monitor (supports regex), 'any' for all interfaces")
 	logCmd.Flags().StringSliceVar(&logConfig.Protocols, "proto", nil, "Protocols to capture in 'protocol;ports[;host]' format, multiple protocols supported")
