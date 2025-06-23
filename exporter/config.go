@@ -84,3 +84,18 @@ type RoundTripsConfig struct {
 	MaxBackups int    `config:"maxBackups"`
 	MaxAge     int    `config:"maxAge"`
 }
+
+func (rc *RoundTripsConfig) Validate() {
+	if rc.Filename == "" {
+		rc.Filename = "roundtrips.log"
+	}
+	if rc.MaxSize <= 0 {
+		rc.MaxSize = 100
+	}
+	if rc.MaxAge <= 0 {
+		rc.MaxAge = 7
+	}
+	if rc.MaxBackups <= 0 {
+		rc.MaxBackups = 10
+	}
+}

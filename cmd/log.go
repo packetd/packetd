@@ -41,7 +41,7 @@ type logCmdConfig struct {
 type protoConfig struct {
 	Name     string
 	Protocol string
-	Port     int
+	Ports    []int
 	Host     string
 }
 
@@ -54,13 +54,16 @@ func (c *logCmdConfig) decodeProtoConfig() []protoConfig {
 		}
 
 		var pc protoConfig
-		port, err := strconv.Atoi(parts[1])
-		if err != nil {
-			continue
+		for _, port := range strings.Split(parts[1], ",") {
+			i, err := strconv.Atoi(port)
+			if err != nil {
+				continue
+			}
+			pc.Ports = append(pc.Ports, i)
 		}
+
 		pc.Name = strconv.Itoa(idx)
 		pc.Protocol = parts[0]
-		pc.Port = port
 
 		if len(parts) > 2 {
 			pc.Host = parts[2]
@@ -88,7 +91,7 @@ sniffer:
 {{ range .Protos }}
     - name: {{ .Name }}
       protocol: {{ .Protocol }}
-      port: {{ .Port }}
+      ports: {{ .Ports }}
       host: {{ .Host }}
 {{ end }}
 
@@ -128,7 +131,7 @@ var logConfig logCmdConfig
 
 var logCmd = &cobra.Command{
 	Use:   "log",
-	Short: "Capture and log network traffic based on protocol configurations",
+	Short: "Capture and record network traffic in roundtrips mode",
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg, err := confengine.LoadContent(logConfig.Yaml())
 		if err != nil {
@@ -149,12 +152,13 @@ var logCmd = &cobra.Command{
 		<-sigs.Terminate()
 		ctr.Stop()
 	},
+	Example: "# packetd log --proto http;80,8080; --proto dns;53 --iface any --log.file roundtrips.log",
 }
 
 func init() {
-	logCmd.Flags().StringVar(&logConfig.File, "file", "", "Path to pcap file to read from")
+	logCmd.Flags().StringVar(&logConfig.File, "pcap.file", "", "Path to pcap file to read from")
 	logCmd.Flags().StringVar(&logConfig.Ifaces, "ifaces", "any", "Network interfaces to monitor (supports regex), 'any' for all interfaces")
-	logCmd.Flags().StringSliceVar(&logConfig.Protocols, "proto", nil, "Protocols to capture in 'protocol;port[;host]' format, comma-separated for multiple")
+	logCmd.Flags().StringSliceVar(&logConfig.Protocols, "proto", nil, "Protocols to capture in 'protocol;ports[;host]' format, multiple protocols supported")
 	logCmd.Flags().BoolVar(&logConfig.IPv4Only, "ipv4", false, "Capture IPv4 traffic only")
 	logCmd.Flags().StringVar(&logConfig.LogFile, "log.file", "roundtrips.log", "Path to log file")
 	logCmd.Flags().IntVar(&logConfig.LogSize, "log.size", 100, "Maximum size of log file in MB")

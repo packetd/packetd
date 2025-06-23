@@ -47,6 +47,7 @@ var agentCmd = &cobra.Command{
 		<-sigs.Terminate()
 		ctr.Stop()
 	},
+	Example: "# packetd agent --config packetd.yaml",
 }
 
 var configPath string

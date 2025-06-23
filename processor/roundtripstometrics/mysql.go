@@ -43,7 +43,7 @@ func (c *mysqlConverter) matchLabels(req *pmysql.Request, rsp *pmysql.Response) 
 	for _, label := range c.config.RequireLabels {
 		switch label {
 		case "request.command":
-			lbs = append(lbs, labels.Label{Name: "method", Value: req.Command})
+			lbs = append(lbs, labels.Label{Name: "command", Value: req.Command})
 
 		case "response.packet_type":
 			var packetType string

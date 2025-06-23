@@ -69,7 +69,7 @@ func New(conf *sniffer.Config) (sniffer.Sniffer, error) {
 	return snif, nil
 }
 
-func (ps *pcapSniffer) L7Ports() []socket.L7Port {
+func (ps *pcapSniffer) L7Ports() []socket.L7Ports {
 	return ps.conf.Protocols.L7Ports()
 }
 

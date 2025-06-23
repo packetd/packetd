@@ -43,7 +43,7 @@ func (c *redisConverter) matchLabels(req *predis.Request, rsp *predis.Response) 
 	for _, label := range c.config.RequireLabels {
 		switch label {
 		case "request.command":
-			lbs = append(lbs, labels.Label{Name: "method", Value: req.Command})
+			lbs = append(lbs, labels.Label{Name: "command", Value: req.Command})
 		case "response.data_type":
 			lbs = append(lbs, labels.Label{Name: "data_type", Value: rsp.DataType})
 		}

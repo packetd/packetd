@@ -115,13 +115,15 @@ func New(conf *confengine.Config) (*Controller, error) {
 	ports := make(map[socket.Port]socket.L7Proto)
 	pools := make(map[socket.L7Proto]protocol.ConnPool)
 	for _, pp := range snif.L7Ports() {
-		ports[pp.Port] = pp.Proto
-		if _, ok := pools[pp.Proto]; !ok {
-			f, err := protocol.Get(pp.Proto)
-			if err != nil {
-				return nil, err
+		for _, port := range pp.Ports {
+			ports[port] = pp.Proto
+			if _, ok := pools[pp.Proto]; !ok {
+				f, err := protocol.Get(pp.Proto)
+				if err != nil {
+					return nil, err
+				}
+				pools[pp.Proto] = f()
 			}
-			pools[pp.Proto] = f()
 		}
 	}
 
@@ -195,7 +197,6 @@ func (c *Controller) setup() {
 		if c.storage == nil {
 			return
 		}
-
 		for _, pool := range c.pools {
 			pool.OnStats(func(stats connstream.TupleStats) {
 				c.updatePoolPromMetrics(stats)

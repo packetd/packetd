@@ -1,9 +1,10 @@
 # packetd
 
-packetd 是一个基于 `libpcap` 的聚焦于应用层协议网络数据观测工具。
+packetd 是一个基于 `libpcap` 的**应用层协议**网络数据无侵观测工具。
 
-packetd 支持从数据流中解析出应用协议，以请求的来回，即 ***RoundTrip* 作为其核心概念。于此同时 packetd 提供了更加现代化的可观测手段，如：
+packetd 支持从数据流中解析出应用协议，使用请求的来回，即 ***RoundTrip* 作为其核心概念，进而衍生出 **Traces/Metrics** 数据。但由于缺乏上下文关联，Traces 仅能代表当次网络情况的情况，无法关联应用层的 Span，更像是一种 Event/Log 类型的数据，只不过以 Traces 的形式组织起来。
 
+packetd 提供了更加现代化的可观测手段，如：
 - 支持 Prometheus RemoteWrite 协议上报 Metrics 数据。
 - 支持 OpenTelemetry 协议上报 Traces 数据。
 - 支持 VictoriaMetrics VmRange Histogram，无需提前定义 bucket。
@@ -16,10 +17,9 @@ $ go install github.com/packetd/packetd@latest
 
 ## Quickstart
 
-packetd 目前提供了两种运行模式，agent 和 log，前者使用 agent 模式持续监听网络包并工作，后者作为一种 cli 工具临时 debug 网络数据包。
+packetd 提供了两种运行模式，agent 和 log，前者使用 agent 模式持续监听网络包并工作，后者作为一种 cli 工具临时 debug 网络请求。
 
 ```shell
-packetd -h
 # packetd is a eBPF-powered network traffic capture and analysis tool
 
 Usage:
@@ -27,8 +27,9 @@ Usage:
 
 Available Commands:
   agent       Run packetd as a network monitoring agent
+  config      Prints the reference configuration
   help        Help about any command
-  log         Capture and log network traffic based on protocol configurations
+  log         Capture and record network traffic in roundtrips mode
 
 Flags:
   -h, --help   help for packetd
@@ -36,15 +37,19 @@ Flags:
 Use "packetd [command] --help" for more information about a command.
 ```
 
-### agent-mode
+packetd 项目启动需要指定配置文件，log 模式本质上是内置以一份配置模版，详见 [#logConfig](cmd/log.go)。可通过 `packetd config` 子命令查看所有配置项内容。
 
-agent 模式以守护进程模式运行，所有配置均在配置文件中声明。
+### 1) agent-mode
+
+agent 模式以守护进程模式运行。
 
 ```shell
 $ packetd agent --config packetd.yaml
+2025-06-22 15:58:25.278 INFO    logger/logger.go:136    sniffer add device (any), address=[]
+...
 ```
 
-### log-mode
+### 2) log-mode
 
 ```shell
 $ packetd log --ifaces any  --proto 'http;80'
@@ -97,6 +102,12 @@ cat roundtrips.log | jq .
 }
 ```
 
+packetd 除了支持从网卡直接捕获网络数据，还支持加载 pcap 文件，如：
+
+```shell
+$ packetd log --pcap.file /tmp/app.pcap
+```
+
 ## Protocol
 
 支持的协议列表，参见 [./protocol](./protocol)
@@ -114,50 +125,23 @@ cat roundtrips.log | jq .
 
 ## Benchmark
 
-压测程序位于 [packetd-benchmark](https://github.com/packetd/packetd-benchmark)
+压测程序位于 [packetd-benchmark](https://github.com/packetd/packetd-benchmark)，压测环境...
 
 ### HTTP
 
-```shell
-$ ./packetd agent --config packetd.yaml
-2025-06-22 16:21:33.197	INFO	logger/logger.go:136	sniffer add device (any), address=[]
-2025-06-22 16:21:33.199	INFO	logger/logger.go:136	server listening on :9091
-
-# 启动 HTTP Server
-root@localhost:~/projects/golang/packetd-benchmark/http/server# go run .
-2025/06/22 16:22:24 server listening on localhost:8083
-
-# --- ROUND1
-
-# 启动 HTTP Client
-./client -body_size 10KB -total 100000 -workers 10 -duration 0s
-...
-2025/06/22 16:21:38 Total 100000 requests take 2.984687081s, qps=33504.349798, bps=2618Mib
-
-# 访问 packetd /protocol/metrics 接口
-curl -s  localhost:9091/protocol/metrics | grep total
-http_requests_total{server_port="8083",method="GET",path="/benchmark",status_code="200"} 100000.000000
-
-# --- ROUND2
-./client -body_size 100KB -total 100000 -workers 20 -duration 0s
-...
-2025/06/22 16:24:32 Total 100000 requests take 2.660366126s, qps=37588.811188, bps=28.68Gib
-
-# 访问 packetd /protocol/metrics 接口
-curl -s  localhost:9091/protocol/metrics | grep total
-http_requests_total{server_port="8083",method="GET",path="/benchmark",status_code="200"} 100000.000000
-```
+| Proto | Requests | Workers | BodySize | Interval | QPS | bps |
+| ----- | -------- | ------- |----------|----------| --- | --- |
+| HTTP | 100000 | 10 | 0s     | 10KB     | 33504.349798  | 2618Mib |
+| HTTP | 100000 | 10 | 0s     | 100KB    | 33504.349798 | 28.68Gib |
 
 ### Redis
 
-```shell
-root@localhost:~/projects/golang/packetd-benchmark/redis/client# ./client -cmd ping -total 100000 -workers 10
-...
-2025/06/22 17:54:26 Total 100000 requests take 1.057603411s, qps=94553.401549, bps=738.7Mib
+| Proto | Requests | Workers | BodySize | Cmd   | Interval          | QPS          | bps |
+|-------| -------- | ------- |----------|-------|-------------------|--------------| --- |
+| Redis | 100000 | 10 | 0s     | 0KB   | Ping | 94553.401549 | 738.7Mib |
 
-curl -s  localhost:9091/protocol/metrics | grep total
-redis_request_total{} 100010.000000
-```
+
+// TODO: 待补充
 
 ## License
 

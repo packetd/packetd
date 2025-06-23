@@ -31,10 +31,10 @@ type Config struct {
 }
 
 type ProtoRule struct {
-	Name     string `config:"name"`
-	Protocol string `config:"protocol"`
-	Host     string `config:"host"`
-	Port     uint16 `config:"port"`
+	Name     string   `config:"name"`
+	Protocol string   `config:"protocol"`
+	Host     string   `config:"host"`
+	Ports    []uint16 `config:"ports"`
 }
 
 func (r ProtoRule) compileBPFFilter(layer4 string) string {
@@ -47,9 +47,25 @@ func (r ProtoRule) compileBPFFilter(layer4 string) string {
 		buf.WriteString(r.Host)
 	}
 
-	if r.Port > 0 {
+	switch len(r.Ports) {
+	case 0:
+		return ""
+
+	case 1:
 		buf.WriteString(" and port ")
-		buf.WriteString(strconv.Itoa(int(r.Port)))
+		buf.WriteString(strconv.Itoa(int(r.Ports[0])))
+
+	default:
+		for i := 0; i < len(r.Ports); i++ {
+			if i > 0 {
+				buf.WriteString(" or port ")
+				buf.WriteString(strconv.Itoa(int(r.Ports[i])))
+				continue
+			}
+			buf.WriteString(" and ( port ")
+			buf.WriteString(strconv.Itoa(int(r.Ports[i])))
+		}
+		buf.WriteString(" ) ")
 	}
 
 	buf.WriteString(")")
@@ -60,6 +76,7 @@ type Protocols struct {
 	Rules []ProtoRule `config:"rules"`
 }
 
+// CompileBPFFilter 编译 BPF 协议语法规则
 func (ps Protocols) CompileBPFFilter() (string, error) {
 	var filters []string
 	for _, p := range ps.Rules {
@@ -72,11 +89,20 @@ func (ps Protocols) CompileBPFFilter() (string, error) {
 	return strings.Join(filters, " or "), nil
 }
 
-func (ps Protocols) L7Ports() []socket.L7Port {
-	var ports []socket.L7Port
+// L7Ports 将协议规则转换为端口列表
+func (ps Protocols) L7Ports() []socket.L7Ports {
+	toPorts := func(lst []uint16) []socket.Port {
+		dst := make([]socket.Port, 0, len(lst))
+		for i := 0; i < len(lst); i++ {
+			dst = append(dst, socket.Port(lst[i]))
+		}
+		return dst
+	}
+
+	var ports []socket.L7Ports
 	for _, proto := range ps.Rules {
-		ports = append(ports, socket.L7Port{
-			Port:  socket.Port(proto.Port),
+		ports = append(ports, socket.L7Ports{
+			Ports: toPorts(proto.Ports),
 			Proto: socket.L7Proto(proto.Protocol),
 		})
 	}

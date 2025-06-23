@@ -31,7 +31,7 @@ func TestCompileBPFFilter(t *testing.T) {
 				{
 					Protocol: "http",
 					Host:     "example.com",
-					Port:     80,
+					Ports:    []uint16{80},
 				},
 			},
 			want: "(tcp and host example.com and port 80)",
@@ -42,14 +42,14 @@ func TestCompileBPFFilter(t *testing.T) {
 				{
 					Protocol: "http",
 					Host:     "example.com",
-					Port:     80,
+					Ports:    []uint16{80, 8080},
 				},
 				{
 					Protocol: "dns",
-					Port:     53,
+					Ports:    []uint16{53},
 				},
 			},
-			want: "(tcp and host example.com and port 80) or (udp and port 53)",
+			want: "(tcp and host example.com and ( port 80 or port 8080 ) ) or (udp and port 53)",
 		},
 		{
 			name: "Unsupported protocol",
@@ -67,7 +67,7 @@ func TestCompileBPFFilter(t *testing.T) {
 					Protocol: "http",
 				},
 			},
-			want: "(tcp)",
+			want: "",
 		},
 	}
 

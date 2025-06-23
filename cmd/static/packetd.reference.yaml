@@ -1,0 +1,298 @@
+# packetd.reference.yaml
+# This is the reference configuration for packetd.
+
+# ========== logger configuration ==========
+#
+# Default: false
+# stdout 是否输出到标准输出 与 file 选项互斥
+logger.stdout: false
+
+# Default: 'info'
+# level 日志级别 可选项 debug, info, warn, error
+logger.level: info
+
+# Default: 'packetd.log'
+# filename 日志文件完整路径名 切割的文件会以时间命名
+logger.filename: 'packetd.log'
+
+# Default: 100(MB)
+# maxSize 单日志文件最大大小
+logger.maxSize: 100
+
+# Default: 7(Days)
+# maxAge 日志文件保留天数
+logger.maxAge: 7
+
+# Default: 10
+# maxBackups 日志文件备份数量
+logger.maxBackups: 10
+
+
+# ========== sniffer configuration ==========
+#
+# Default: ''
+# ifaces 指定监听的网卡 与 tcpdump 的 -i 参数一致
+sniffer.ifaces: 'any'
+
+# Default: 'pcap'
+# engine 指定监听引擎 目前仅支持 pcap
+sniffer.engine: pcap
+
+# Default: false
+# ipv4Only 是否只监听 ipv4 地址的网卡
+sniffer.ipv4Only: false
+
+# Default: None
+# protocols.rules 声明解析协议以及端口 使用列表允许同时指定多个协议
+#  - name: 规则名称
+#  - protocol: 协议名称
+#  - port: 端口号
+sniffer.protocols:
+  rules:
+#    - name: "redis-example"
+#      protocol: "redis"
+#      port: 6379
+#
+#    - name: "http-example"
+#      protocol: "http"
+#      port: 80
+
+# Default: ''
+# file 指定是否从文件中加载网络包 与监听网卡选项互斥
+sniffer.file: ''
+
+
+# ========== server configuration ==========
+#
+# Default: false
+# enabled 是否启动 HTTP 服务
+server.enabled: false
+
+# Default: '9091'
+# address HTTP 服务地址
+server.address: ":9091"
+
+# Default: 1m
+# timeout HTTP 服务超时时间
+server.timeout: 1m
+
+# Default: false
+# pprof 是否开启 pprof
+server.pprof: true
+
+
+# ========== controller configuration ==========
+#
+controller.layer4Metrics:
+  # Default: false
+  # enabled 是否上报 Layer4 指标
+  enabled: false
+
+  # Default: []
+  # requiredLabels 上报 Layer4 指标所需的标签
+  #
+  # labels mapping:
+  # source.host => src_host
+  # source.port => src_port
+  # destination.host => dst_host
+  # destination.port => dst_port
+  requiredLabels:
+    - "source.host"
+    - "source.port"
+    - "destination.host"
+    - "destination.port"
+
+
+# ========== metricsStorage configuration ==========
+#
+# Default: false
+# enabled 是否启用指标存储 /metrics 上报以及 roundtripstometrics 均需要用到
+metricsStorage.enabled:
+
+# Default: 5m
+# expired 指标存储过期时间
+metricsStorage.expired: 5m
+
+# Default: false
+# vmHistogram 是否使用 vmhistogram 即 vmrange 特性
+metricsStorage.vmHistogram: false
+
+
+# ========== processor configuration ==========
+#
+# Default: []
+# processor 处理器列表定义 已支持 processor 类型
+# - roundtripstometrics: 将 roundtrip 数据转换为 metrics
+# - roundtripstotraces: 将 roundtrip 数据转换为 traces
+processor:
+  # roundtripstometrics
+  #
+  # requireLabels: 定义了从 roundtrip 生成的指标的维度
+  # labels 由 commonLabels 和 customLabels 组成，前者为每种协议均存在的 labels
+  #
+  # prometheus 指标维度名称建议使用【下划线】因此这里会有一个 mapping 规则
+  # commonLabels labels mapping:
+  #
+  # - client.address => client_address
+  # - client.port => client_port
+  # - server.address => server_address
+  # - server.port => server_port
+  - name: roundtripstometrics
+    config:
+      amqp:
+        # commonLabels 示例 后续 proto 不再赘述
+#        - "client.address" # client_address
+#        - "client.port" # client_port
+#        - "server.address" # server_address
+#        - "server.port" # server_port
+#        - "request.queue_name" # queue_name
+#        - "request.class" # class
+#        - "request.method"  # method
+
+      dns:
+      # commonLabels...
+#        - "request.question" # question
+
+      grpc:
+        # commonLabels...
+#        - "request.service" # service
+#        - "response.status_code" # status_code
+
+      http:
+        requireLabels:
+          # commonLabels...
+#          - "request.method" # method
+#          - "request.path"  # path
+#          - "response.status_code" # status_code
+
+      http2:
+        # commonLabels...
+#        - "request.method" # method
+#        - "request.path" # path
+#        - "response.status_code" # status_code
+
+      kafka:
+        requireLabels:
+          # commonLabels...
+#          - "request.api" # api
+#          - "request.version" # version
+
+      mongodb:
+        requireLabels:
+          # commonLabels...
+#          - "request.command" # command
+#          - "request.source" # source
+#          - "response.ok" # ok
+
+      mysql:
+        requireLabels:
+          # commonLabels...
+#          - "request.command" # command
+#          - "response.packet_type" # packet_type
+
+      postgresql:
+        requireLabels:
+          # commonLabels...
+#          - "request.command" # command
+#          - "response.packet_type" # packet_type
+
+      redis:
+        requireLabels:
+          # commonLabels...
+#          - "request.command" # command
+#          - "response.data_type"  # data_type
+
+  # roundtripstotraces
+  #
+  # 暂无定制化配置项
+  - name: roundtripstotraces
+    config:
+
+
+# ========== pipeline configuration ==========
+#
+# Default: []
+# pipeline 流水线列表 支持 traces / metrics 两种数据类型的流水线
+#
+# name 规则为 {data_type}/{name}
+# - data_type: traces / metrics
+# - name: 规则名称
+#
+# Note: 如无特殊需要 这里无需单独调整
+pipeline:
+  - name: "traces/common"
+    processors:
+      - roundtripstotraces
+
+  - name: "metrics/common"
+    processors:
+      - roundtripstometrics
+
+
+# ========== exporter configuration ==========
+#
+# exporter traces 配置 是否通过 OTLP 协议以 HTTP 形式上报数据
+exporter.traces:
+  # Default: false
+  # enabled 是否启用 traces 上报
+  enabled: false
+
+  # Default: ''
+  # endpoint 上报地址 如 'http://localhost:4318/v1/traces'
+  endpoint: http://localhost:4318/v1/traces
+
+  # Default: 100
+  # batch 批量上报 span 数量
+  batch: 100
+
+  # Default: 3s
+  # interval 上报间隔
+  interval: 3s
+
+  # Default: 15s
+  # timeout 上报超时时间
+  timeout: 15s
+
+# exporter metrics 配置 是否通过 Prometheus RemoteWrite 协议以 HTTP 形式上报数据
+exporter.metrics:
+  # Default: false
+  # enabled 是否启用 metrics 上报
+  enabled: false
+
+  # Default: ''
+  # endpoint 上报地址 如 'http://localhost:4318/prometheus/write'
+  endpoint: http://localhost:4318/prometheus/write
+
+  # Default: 1m
+  # interval 上报间隔
+  interval: 1m
+
+  # Default: 15s
+  # timeout 上报超时时间
+  timeout: 15s
+
+# exporter roundtrips 配置 是否将 roundtrip 以 JSON 数据写入文件或标准输出
+exporter.roundtrips:
+  # Default: false
+  # enabled 是否输出 roundtrip
+  enabled: false
+
+  # Default: false
+  # console 是否输出到标准输出
+  console: false
+
+  # Default: 'roundtrips.log'
+  # filename 输出文件
+  filename: "roundtrips.log"
+
+  # Default: 100(MB)
+  # maxSize 单文件最大大小
+  maxSize: 100
+
+  # Default: 10
+  # maxBackups 最大备份数量
+  maxBackups: 10
+
+  # Default: 7(Days)
+  # maxAge 最大保留天数
+  maxAge: 7

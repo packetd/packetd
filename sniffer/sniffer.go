@@ -40,7 +40,7 @@ type Sniffer interface {
 	SetOnL4Packet(f OnL4Packet)
 
 	// L7Ports 返回当前应用层端口及协议列表
-	L7Ports() []socket.L7Port
+	L7Ports() []socket.L7Ports
 
 	// Close 关闭 Sniffer 并释放关联资源
 	Close()
@@ -71,6 +71,10 @@ func New(conf *confengine.Config) (Sniffer, error) {
 	var cfg Config
 	if err := conf.UnpackChild("sniffer", &cfg); err != nil {
 		return nil, err
+	}
+
+	if cfg.Engine == "" {
+		cfg.Engine = "pcap"
 	}
 
 	f, err := Get(cfg.Engine)
