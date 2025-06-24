@@ -125,6 +125,10 @@ $ packetd log --pcap.file /tmp/app.pcap
 - postgresql
 - redis
 
+## Observation
+
+// TODO: 指标以及 traces 介绍
+
 ## Benchmark
 
 压测程序位于 [packetd-benchmark](https://github.com/packetd/packetd-benchmark)，压测环境...

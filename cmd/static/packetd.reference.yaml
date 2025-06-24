@@ -140,6 +140,7 @@ processor:
   - name: roundtripstometrics
     config:
       amqp:
+        requireLabels:
         # commonLabels 示例 后续 proto 不再赘述
 #        - "client.address" # client_address
 #        - "client.port" # client_port
@@ -150,10 +151,12 @@ processor:
 #        - "request.method"  # method
 
       dns:
+        requireLabels:
       # commonLabels...
 #        - "request.question" # question
 
       grpc:
+        requireLabels:
         # commonLabels...
 #        - "request.service" # service
 #        - "response.status_code" # status_code
@@ -166,6 +169,7 @@ processor:
 #          - "response.status_code" # status_code
 
       http2:
+        requireLabels:
         # commonLabels...
 #        - "request.method" # method
 #        - "request.path" # path
