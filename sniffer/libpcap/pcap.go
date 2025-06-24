@@ -47,6 +47,7 @@ const (
 	defaultCaptureLength = socket.MaxIPPacketSize
 )
 
+// hasIPv4Addr 判断网卡是否包含 ipv4 地址
 func hasIPv4Addr(iface net.Interface) bool {
 	addrs, err := iface.Addrs()
 	if err != nil || len(addrs) == 0 {

@@ -23,11 +23,12 @@ import (
 )
 
 type Config struct {
-	File      string    `config:"file"`
-	Ifaces    string    `config:"ifaces"`
-	Engine    string    `config:"engine"`
-	IPv4Only  bool      `config:"ipv4Only"`
-	Protocols Protocols `config:"protocols"`
+	File          string    `config:"file"`
+	Ifaces        string    `config:"ifaces"`
+	Engine        string    `config:"engine"`
+	IPv4Only      bool      `config:"ipv4Only"`
+	Protocols     Protocols `config:"protocols"`
+	NoPromiscuous bool      `config:"noPromiscuous"`
 }
 
 type ProtoRule struct {
@@ -84,7 +85,12 @@ func (ps Protocols) CompileBPFFilter() (string, error) {
 		if !ok {
 			return "", errors.Errorf("unsupported protocol (%s)", p.Protocol)
 		}
-		filters = append(filters, p.compileBPFFilter(string(l4)))
+
+		s := p.compileBPFFilter(string(l4))
+		if strings.TrimSpace(s) == "" {
+			continue
+		}
+		filters = append(filters, s)
 	}
 	return strings.Join(filters, " or "), nil
 }

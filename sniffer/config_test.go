@@ -37,6 +37,22 @@ func TestCompileBPFFilter(t *testing.T) {
 			want: "(tcp and host example.com and port 80)",
 		},
 		{
+			name: "Nil ports",
+			rules: []ProtoRule{
+				{
+					Protocol: "http",
+					Host:     "example.com",
+					Ports:    []uint16{80},
+				},
+				{
+					Protocol: "redis",
+					Host:     "example.com",
+					Ports:    nil,
+				},
+			},
+			want: "(tcp and host example.com and port 80)",
+		},
+		{
 			name: "Multiple protocol rules",
 			rules: []ProtoRule{
 				{

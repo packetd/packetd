@@ -42,6 +42,10 @@ sniffer.engine: pcap
 # ipv4Only 是否只监听 ipv4 地址的网卡
 sniffer.ipv4Only: false
 
+# Default: false
+# noPromiscuous 是否关闭 promiscuous 模式
+sniffer.noPromiscuous: false
+
 # Default: None
 # protocols.rules 声明解析协议以及端口 使用列表允许同时指定多个协议
 #  - name: 规则名称
@@ -49,13 +53,13 @@ sniffer.ipv4Only: false
 #  - port: 端口号
 sniffer.protocols:
   rules:
-#    - name: "redis-example"
+#    - name: "redis"
 #      protocol: "redis"
-#      port: 6379
+#      ports: [6379]
 #
-#    - name: "http-example"
+#    - name: "http"
 #      protocol: "http"
-#      port: 80
+#      ports: [80, 8080]
 
 # Default: ''
 # file 指定是否从文件中加载网络包 与监听网卡选项互斥
@@ -128,7 +132,7 @@ processor:
   # roundtripstometrics
   #
   # requireLabels: 定义了从 roundtrip 生成的指标的维度
-  # labels 由 commonLabels 和 customLabels 组成，前者为每种协议均存在的 labels
+  # labels 由 commonLabels 和 customLabels 组成 前者为每种协议均存在的 labels
   #
   # prometheus 指标维度名称建议使用【下划线】因此这里会有一个 mapping 规则
   # commonLabels labels mapping:
@@ -141,7 +145,7 @@ processor:
     config:
       amqp:
         requireLabels:
-        # commonLabels 示例 后续 proto 不再赘述
+          # commonLabels 示例 后续 proto 不再赘述
 #        - "client.address" # client_address
 #        - "client.port" # client_port
 #        - "server.address" # server_address
@@ -152,12 +156,12 @@ processor:
 
       dns:
         requireLabels:
-      # commonLabels...
+          # commonLabels...
 #        - "request.question" # question
 
       grpc:
         requireLabels:
-        # commonLabels...
+          # commonLabels...
 #        - "request.service" # service
 #        - "response.status_code" # status_code
 
@@ -170,7 +174,7 @@ processor:
 
       http2:
         requireLabels:
-        # commonLabels...
+          # commonLabels...
 #        - "request.method" # method
 #        - "request.path" # path
 #        - "response.status_code" # status_code
@@ -278,7 +282,7 @@ exporter.metrics:
 # exporter roundtrips 配置 是否将 roundtrip 以 JSON 数据写入文件或标准输出
 exporter.roundtrips:
   # Default: false
-  # enabled 是否输出 roundtrip
+  # enabled 是否输出 roundtrips
   enabled: false
 
   # Default: false

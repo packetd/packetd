@@ -7,6 +7,7 @@ server:
 
 logger:
   level: "info"
+  stdout: true
 
 controller:
   layer4Metrics:
@@ -18,58 +19,58 @@ controller:
 #      - "destination.port"
 
 sniffer.ifaces: 'any'
-sniffer.engine: pcap # or xdp
+sniffer.engine: pcap
 sniffer.ipv4Only: false
 #sniffer.file: "/tmp/apm-worker.pcap"
 
 sniffer.protocols:
   rules:
-    - name: "redis"
-      protocol: "redis"
-      port: 6379
-#
-#    - name: "http-example"
-#      protocol: "http"
-#      port: 80
-##
+#    - name: "redis"
+#      protocol: "redis"
+#      ports: [6379]
+
+    - name: "http"
+      protocol: "http"
+      ports: [8083]
+
 #    - name: "mysql"
 #      protocol: "mysql"
-#      port: 3306
+#      ports: [3306]
 
 #    - name: "grpc"
 #      protocol: "grpc"
-#      port: 8085
-#
+#      port: [8085]
+
 #    - name: dns
 #      protocol: "dns"
-#      port: 53
+#      port: [53]
 
 #    - name: mongodb
 #      protocol: "mongodb"
-#      port: 27017
+#      port: [27017]
 
 #    - name: "postgresql"
 #      protocol: "postgresql"
-#      port: 5432
+#      ports: [5432]
 
 #    - name: "kafka"
 #      protocol: "kafka"
-#      port: 9092
-#
+#      ports: [9092]
+
 #    - name: amqp
 #      protocol: "amqp"
-#      port: 5672
+#      ports: [5672]
 
 processor:
   - name: roundtripstometrics
     config:
       http:
         requireLabels:
-          - "server.host"
-          - "server.port"
-          - "request.method"
-          - "request.path"
-          - "response.status_code"
+#          - "server.host"
+#          - "server.port"
+#          - "request.method"
+#          - "request.path"
+#          - "response.status_code"
 
       kafka:
         requireLabels:

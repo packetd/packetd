@@ -26,7 +26,7 @@ import (
 
 var agentCmd = &cobra.Command{
 	Use:   "agent",
-	Short: "Run packetd as a network monitoring agent",
+	Short: "Run in network monitoring agent mode",
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg, err := confengine.LoadConfigPath(configPath)
 		if err != nil {
@@ -36,7 +36,8 @@ var agentCmd = &cobra.Command{
 
 		ctr, err := controller.New(cfg)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to create controller: %v\n", err)
+			fmt.Fprintf(os.Stderr, "failed to create controller: %v\n"+
+				"Note: This operation may requires root privileges (try running with 'sudo')", err)
 			os.Exit(1)
 		}
 		if err := ctr.Start(); err != nil {

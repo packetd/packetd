@@ -125,7 +125,7 @@ func (ps *pcapSniffer) makeHandlers() error {
 }
 
 func (ps *pcapSniffer) getHandle(device, bpfFilter string) (*pcap.Handle, error) {
-	handle, err := pcap.OpenLive(device, socket.MaxIPPacketSize, false, pcap.BlockForever)
+	handle, err := pcap.OpenLive(device, socket.MaxIPPacketSize, !ps.conf.NoPromiscuous, pcap.BlockForever)
 	if err != nil {
 		return nil, err
 	}

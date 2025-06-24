@@ -29,14 +29,15 @@ import (
 )
 
 type logCmdConfig struct {
-	Console    bool
-	File       string
-	Ifaces     string
-	IPv4Only   bool
-	LogFile    string
-	LogSize    int
-	LogBackups int
-	Protocols  []string
+	Console       bool
+	File          string
+	Ifaces        string
+	IPv4Only      bool
+	NoPromiscuous bool
+	LogFile       string
+	LogSize       int
+	LogBackups    int
+	Protocols     []string
 }
 
 type protoConfig struct {
@@ -82,11 +83,13 @@ pipeline:
 metricsStorage:
 server:
 logger:
+  stdout: true
 
 sniffer:
   ifaces: {{ .Ifaces }}
   file: {{ .File }}
   ipv4Only: {{ .IPv4Only }}
+  noPromiscuous: {{ .NoPromiscuous }}
   protocols:
     rules:
 {{ range .Protos }}
@@ -105,7 +108,7 @@ exporter:
     filename: {{ .LogFile }}
     maxSize: {{ .LogSize }}
     maxBackups: {{ .LogBackups }}
-    maxAge: 30
+    maxAge: 7
 `
 	tpl, err := template.New("Config").Parse(text)
 	if err != nil {
@@ -133,7 +136,7 @@ var logConfig logCmdConfig
 
 var logCmd = &cobra.Command{
 	Use:   "log",
-	Short: "Capture and record network traffic in roundtrips mode",
+	Short: "Capture and log network traffic roundtrips",
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg, err := confengine.LoadContent(logConfig.Yaml())
 		if err != nil {
@@ -143,7 +146,8 @@ var logCmd = &cobra.Command{
 
 		ctr, err := controller.New(cfg)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to create controller: %v\n", err)
+			fmt.Fprintf(os.Stderr, "failed to create controller: %v\n"+
+				"Note: This operation may requires root privileges (try running with 'sudo')", err)
 			os.Exit(1)
 		}
 		if err := ctr.Start(); err != nil {
@@ -154,11 +158,12 @@ var logCmd = &cobra.Command{
 		<-sigs.Terminate()
 		ctr.Stop()
 	},
-	Example: "# packetd log --proto 'http;80,8080'; --proto 'dns;53' --iface any --console",
+	Example: "# packetd log --proto 'http;80,8080' --proto 'dns;53' --ifaces any --console",
 }
 
 func init() {
 	logCmd.Flags().BoolVar(&logConfig.Console, "console", false, "Enable console logging")
+	logCmd.Flags().BoolVar(&logConfig.NoPromiscuous, "no-promiscuous", false, "Don't put the interface into promiscuous mode")
 	logCmd.Flags().StringVar(&logConfig.File, "pcap.file", "", "Path to pcap file to read from")
 	logCmd.Flags().StringVar(&logConfig.Ifaces, "ifaces", "any", "Network interfaces to monitor (supports regex), 'any' for all interfaces")
 	logCmd.Flags().StringSliceVar(&logConfig.Protocols, "proto", nil, "Protocols to capture in 'protocol;ports[;host]' format, multiple protocols supported")
