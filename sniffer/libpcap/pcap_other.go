@@ -59,7 +59,7 @@ func (ps *pcapSniffer) SetOnL4Packet(f sniffer.OnL4Packet) {
 	ps.onL4Packet = f
 }
 
-func (ps *pcapSniffer) L7Ports() []socket.L7Port {
+func (ps *pcapSniffer) L7Ports() []socket.L7Ports {
 	return ps.conf.Protocols.L7Ports()
 }
 

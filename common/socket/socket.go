@@ -78,6 +78,7 @@ func ToIPV6(ip net.IP) IPV {
 	}
 }
 
+// NetIP 将 IPV 转换为 net.IP
 func (ipv IPV) NetIP() net.IP {
 	if ipv.Version == V4 {
 		return ipv.IP[:net.IPv4len]
@@ -160,11 +161,6 @@ const (
 	L7ProtoAMQP       L7Proto = "amqp"
 )
 
-type L7Port struct {
-	Port  Port
-	Proto L7Proto
-}
-
 func L7ProtoBased(l7 L7Proto) (L4Proto, bool) {
 	protos := map[L7Proto]L4Proto{
 		L7ProtoHTTP:       L4ProtoTCP,
@@ -181,4 +177,10 @@ func L7ProtoBased(l7 L7Proto) (L4Proto, bool) {
 
 	v, ok := protos[l7]
 	return v, ok
+}
+
+// L7Ports 应用层端口列表
+type L7Ports struct {
+	Ports []Port
+	Proto L7Proto
 }

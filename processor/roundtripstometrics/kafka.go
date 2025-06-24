@@ -48,7 +48,7 @@ func (c *kafkaConverter) matchLabels(req *pkafka.Request, rsp *pkafka.Response) 
 		case "request.api":
 			lbs = append(lbs, labels.Label{Name: "api", Value: packet.API})
 		case "request.version":
-			lbs = append(lbs, labels.Label{Name: "source", Value: strconv.Itoa(int(packet.APIVersion))})
+			lbs = append(lbs, labels.Label{Name: "version", Value: strconv.Itoa(int(packet.APIVersion))})
 		}
 	}
 	return lbs

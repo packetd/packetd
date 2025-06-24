@@ -43,7 +43,7 @@ func (c *grpcConverter) matchLabels(req *pgrpc.Request, rsp *pgrpc.Response) lab
 	for _, label := range c.config.RequireLabels {
 		switch label {
 		case "request.service":
-			lbs = append(lbs, labels.Label{Name: "method", Value: req.Service})
+			lbs = append(lbs, labels.Label{Name: "service", Value: req.Service})
 		case "response.status_code":
 			lbs = append(lbs, labels.Label{Name: "status_code", Value: rsp.Status})
 		}

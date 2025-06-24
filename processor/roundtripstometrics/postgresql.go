@@ -49,7 +49,7 @@ func (c *postgresqlConverter) matchLabels(req *ppostgresql.Request, rsp *ppostgr
 	for _, label := range c.config.RequireLabels {
 		switch label {
 		case "request.command":
-			lbs = append(lbs, labels.Label{Name: "method", Value: name})
+			lbs = append(lbs, labels.Label{Name: "command", Value: name})
 
 		case "response.packet_type":
 			var packetType string

@@ -32,11 +32,12 @@ func init() {
 type Sinker struct {
 	wr      io.WriteCloser
 	encoder *json.Encoder
-	cfg     exporter.RoundTripsConfig
+	cfg     *exporter.RoundTripsConfig
 }
 
 func New(conf exporter.Config) (exporter.Sinker, error) {
-	cfg := conf.RoundTrips
+	cfg := &conf.RoundTrips
+	cfg.Validate()
 
 	var wr io.WriteCloser
 	switch {
