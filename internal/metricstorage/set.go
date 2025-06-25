@@ -99,6 +99,16 @@ func newSet(expired time.Duration) *Set {
 	}
 }
 
+func (s *Set) Reset() {
+	s.mut.Lock()
+	defer s.mut.Unlock()
+
+	s.counters = make(map[string]*Counter)
+	s.histograms = make(map[string]*Histogram)
+	s.vmHistograms = make(map[string]*VmHistogram)
+	s.gauges = make(map[string]*Gauge)
+}
+
 func (s *Set) GetOrCreateCounter(name string) *Counter {
 	s.mut.RLock()
 	inst, ok := s.counters[name]

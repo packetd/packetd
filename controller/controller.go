@@ -159,7 +159,7 @@ func (c *Controller) decideProto(st socket.Tuple) (socket.Port, protocol.ConnPoo
 }
 
 func (c *Controller) Start() error {
-	c.setup()
+	c.setupServer()
 
 	for i := 0; i < common.Concurrency(); i++ {
 		go wait.Until(c.ctx, c.consumeRoundTrip)
@@ -188,7 +188,7 @@ func (c *Controller) Start() error {
 	return nil
 }
 
-func (c *Controller) setup() {
+func (c *Controller) setupServer() {
 	if c.svr == nil {
 		return
 	}
@@ -203,6 +203,13 @@ func (c *Controller) setup() {
 			})
 		}
 		c.storage.WritePrometheus(w)
+	})
+
+	c.svr.RegisterPostRoute("/-/reset", func(w http.ResponseWriter, r *http.Request) {
+		if c.storage == nil {
+			return
+		}
+		c.storage.Reset()
 	})
 }
 

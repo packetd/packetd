@@ -216,11 +216,6 @@ func (ps *pcapSniffer) Close() {
 //
 // 同一块网卡可能同时包含多个 IP 地址 v4/v6 所以这里只做初步筛选 允许筛除只含 ipv6 地址的网卡
 func filterInterfaces(pattern string, hasIPv4 bool) ([]net.Interface, error) {
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return nil, err
-	}
-
 	var all bool
 	if pattern == "" || pattern == "any" {
 		all = true // 代表监听所有网卡
@@ -232,6 +227,10 @@ func filterInterfaces(pattern string, hasIPv4 bool) ([]net.Interface, error) {
 		return nil, err
 	}
 
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
 	for _, iface := range ifaces {
 		if r.MatchString(iface.Name) || all {
 			if hasIPv4 && !hasIPv4Addr(iface) {

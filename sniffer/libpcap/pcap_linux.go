@@ -264,12 +264,6 @@ func filterInterfaces(pattern string, hasIPv4 bool) ([]net.Interface, error) {
 	if pattern == "any" {
 		return []net.Interface{{Name: "any"}}, nil
 	}
-
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return nil, err
-	}
-
 	if pattern == "" {
 		pattern = ".*"
 	}
@@ -280,6 +274,10 @@ func filterInterfaces(pattern string, hasIPv4 bool) ([]net.Interface, error) {
 		return nil, err
 	}
 
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
 	for _, iface := range ifaces {
 		if r.MatchString(iface.Name) {
 			if hasIPv4 && !hasIPv4Addr(iface) {
