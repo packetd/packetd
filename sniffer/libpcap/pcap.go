@@ -76,11 +76,15 @@ func ifaceAddress(iface net.Interface) []string {
 		return nil
 	}
 
-	var s []string
+	var lst []string
 	for _, addr := range addrs {
-		s = append(s, addr.String())
+		s := addr.String()
+		if s == "" {
+			continue
+		}
+		lst = append(lst, s)
 	}
-	return s
+	return lst
 }
 
 func makeFileHandle(path, bpfFilter string) (*pcap.Handle, error) {

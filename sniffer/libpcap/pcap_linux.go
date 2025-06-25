@@ -285,6 +285,10 @@ func filterInterfaces(pattern string, hasIPv4 bool) ([]net.Interface, error) {
 			if hasIPv4 && !hasIPv4Addr(iface) {
 				continue
 			}
+			addrs, err := iface.Addrs()
+			if err != nil || len(addrs) == 0 {
+				continue
+			}
 			matched = append(matched, iface)
 		}
 	}

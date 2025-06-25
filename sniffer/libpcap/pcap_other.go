@@ -80,6 +80,10 @@ func New(conf *sniffer.Config) (sniffer.Sniffer, error) {
 	return snif, nil
 }
 
+// makeHandlers 创建设备监听句柄
+//
+// TODO(mando): 非 linux 系统不支持 'any' 网卡 即启动时就已经决定了使用的设备
+// 后续不再更新 因此这里需要有一个 watch/poll 机制来保证新增的设备能被处理
 func (ps *pcapSniffer) makeHandlers() error {
 	ifaces, err := filterInterfaces(ps.conf.Ifaces, ps.conf.IPv4Only)
 	if err != nil {
@@ -231,6 +235,10 @@ func filterInterfaces(pattern string, hasIPv4 bool) ([]net.Interface, error) {
 	for _, iface := range ifaces {
 		if r.MatchString(iface.Name) || all {
 			if hasIPv4 && !hasIPv4Addr(iface) {
+				continue
+			}
+			addrs, err := iface.Addrs()
+			if err != nil || len(addrs) == 0 {
 				continue
 			}
 			matched = append(matched, iface)

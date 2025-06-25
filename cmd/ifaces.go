@@ -32,11 +32,11 @@ var ifacesCmd = &cobra.Command{
 		}
 
 		for _, iface := range ifaces {
-			addr, err := iface.Addrs()
-			if err != nil {
+			addrs, err := iface.Addrs()
+			if err != nil || len(addrs) == 0 {
 				continue
 			}
-			fmt.Printf("- %s: %v\n", iface.Name, addr)
+			fmt.Printf("- %s: %v\n", iface.Name, addrs)
 		}
 	},
 }
