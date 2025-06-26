@@ -16,6 +16,8 @@ package socket
 import (
 	"sync"
 	"time"
+
+	"github.com/packetd/packetd/internal/fasttime"
 )
 
 type TTLCache struct {
@@ -55,7 +57,9 @@ func (tc *TTLCache) Has(tuple Tuple) bool {
 	if !ok {
 		return false
 	}
-	return time.Now().Before(v)
+
+	// 过期时间不要求非常精准 这里使用 UNIX 时间戳即可
+	return fasttime.UnixTimestamp() > v.Unix()
 }
 
 func (tc *TTLCache) Count() int {
