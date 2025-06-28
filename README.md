@@ -2,7 +2,7 @@
 
 packetd 是一个基于 `libpcap` 的**应用层协议**网络数据无侵观测项目。
 
-packetd 支持从数据流中解析出多种应用协议（HTTP/Grpc/MySQL/Redis/...），使用请求的来回 ***RoundTrip** 作为其核心概念，进而衍生出 **Traces/Metrics** 数据。
+packetd 支持从数据流中解析出多种应用协议（HTTP/Grpc/MySQL/Redis/...），使用请求的来回 **RoundTrip** 作为其核心概念，进而衍生出 **Traces/Metrics** 数据。
 
 但由于缺乏上下文关联，Traces 仅能代表当次网络情况的情况，无法关联应用层的 Span，更像是一种 Event/Log 类型的数据，只不过以 Traces 的形式组织起来。
 
@@ -11,13 +11,13 @@ packetd 提供了更加现代化的可观测手段，可以无缝地对接现有
 - 支持 VictoriaMetrics VmRange Histogram，无需提前定义 bucket。
 - 支持 OpenTelemetry 协议上报 Traces 数据。
 
-## Installation
+## 🔰 Installation
 
 ```shell
 $ go install github.com/packetd/packetd@latest
 ```
 
-## Quickstart
+## 📝 Quickstart
 
 packetd 提供了 agent 和 log 两种运行模式，前者使用 agent 模式持续监听网络包并工作，后者作为一种 cli 工具可以临时 debug 网络请求。
 
@@ -170,7 +170,7 @@ packetd 除了支持从网卡直接捕获网络数据，还支持加载 pcap 文
 $ packetd log --pcap.file /tmp/app.pcp --console
 ```
 
-## Configuration
+## 💡 Configuration
 
 建议使用 `packetd config > packetd.yaml` 生成一个样例文件并进行修改，样例文件已对各项配置进行了详细说明。
 
