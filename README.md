@@ -17,7 +17,7 @@ packetd 提供了更加现代化的可观测手段，可以无缝地对接现有
 $ go install github.com/packetd/packetd@latest
 ```
 
-## 📝 Quickstart
+## 🚀 Quickstart
 
 packetd 提供了 agent 和 log 两种运行模式，前者使用 agent 模式持续监听网络包并工作，后者作为一种 cli 工具可以临时 debug 网络请求。
 
@@ -51,6 +51,8 @@ packetd ifaces
 - docker0: [172.17.0.1/16]
 - br-05d5cdd6d4c9: [172.18.0.1/16]
 ```
+
+### log mode
 
 这里以 log 模式作为示例，展示 packetd 的工作模式及输出内容（报错可尝试使用 root 权限执行）：
 
@@ -170,11 +172,107 @@ packetd 除了支持从网卡直接捕获网络数据，还支持加载 pcap 文
 $ packetd log --pcap.file /tmp/app.pcp --console
 ```
 
-## 💡 Configuration
+### agent-mode
+
+agent 模式则需要显式指定配置文件，默认为 `packetd.yaml`，启动命令 `packetd --config packetd.yaml`
+
+```yaml
+# packetd.yaml
+server:
+  enabled: true
+  address: ":9091"
+
+logger:
+  stdout: true
+
+controller:
+  layer4Metrics:
+    enabled: true
+
+sniffer.ifaces: 'any'
+sniffer.engine: pcap
+sniffer.protocols:
+  rules:
+    - name: "http"
+      protocol: "http"
+      ports: [80]
+
+processor:
+  - name: roundtripstometrics
+    config:
+      http:
+        requireLabels:
+          - "server.host"
+          - "server.port"
+          - "request.method"
+          - "request.path"
+          - "response.status_code"
+
+  - name: roundtripstotraces
+    config:
+
+pipeline:
+  - name: "metrics/common"
+    processors:
+      - roundtripstometrics
+
+metricsStorage:
+  enabled: true
+  vmHistogram: true
+
+# 这里仅做指标暴露 不输出其他任何内容 详细配置参见 packetd.reference.yaml
+exporter:
+```
+
+同样在新终端中访问任意 80 端口的 HTTP 服务，如：
+```shell
+$ curl baidu.com
+<html>
+<meta http-equiv="refresh" content="0;url=http://www.baidu.com/">
+</html>
+
+$ curl baidu.com/hello/world
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html><head>
+<title>302 Found</title>
+</head><body>
+<h1>Found</h1>
+<p>The document has moved <a href="http://www.baidu.com/search/error.html">here</a>.</p>
+</body></html>
+```
+
+访问 9091 端口查看 `/protocol/metrics` API 的打点统计。
+```shell
+$ curl localhost:9091/protocol/metrics
+http_requests_total{server_port="80",method="GET",path="/",status_code="200"} 1.000000
+http_requests_total{server_port="80",method="GET",path="/hello/world",status_code="302"} 1.000000
+layer4_packets_total{} 24.000000
+layer4_bytes_total{} 1048.000000
+http_request_duration_seconds_bucket{server_port="80",method="GET",path="/",status_code="200",vmrange="1.136e-01...1.292e-01"} 1.000000
+http_request_duration_seconds_sum{server_port="80",method="GET",path="/",status_code="200"} 0.116916
+http_request_duration_seconds_count{server_port="80",method="GET",path="/",status_code="200"} 1.000000
+http_request_duration_seconds_bucket{server_port="80",method="GET",path="/hello/world",status_code="302",vmrange="1.000e-01...1.136e-01"} 1.000000
+http_request_duration_seconds_sum{server_port="80",method="GET",path="/hello/world",status_code="302"} 0.111345
+http_request_duration_seconds_count{server_port="80",method="GET",path="/hello/world",status_code="302"} 1.000000
+http_request_body_bytes_bucket{server_port="80",method="GET",path="/",status_code="200",vmrange="0...1.000e-09"} 1.000000
+http_request_body_bytes_sum{server_port="80",method="GET",path="/",status_code="200"} 0.000000
+http_request_body_bytes_count{server_port="80",method="GET",path="/",status_code="200"} 1.000000
+http_request_body_bytes_bucket{server_port="80",method="GET",path="/hello/world",status_code="302",vmrange="0...1.000e-09"} 1.000000
+http_request_body_bytes_sum{server_port="80",method="GET",path="/hello/world",status_code="302"} 0.000000
+http_request_body_bytes_count{server_port="80",method="GET",path="/hello/world",status_code="302"} 1.000000
+http_response_body_bytes_bucket{server_port="80",method="GET",path="/hello/world",status_code="302",vmrange="2.154e+02...2.448e+02"} 1.000000
+http_response_body_bytes_sum{server_port="80",method="GET",path="/hello/world",status_code="302"} 222.000000
+http_response_body_bytes_count{server_port="80",method="GET",path="/hello/world",status_code="302"} 1.000000
+http_response_body_bytes_bucket{server_port="80",method="GET",path="/",status_code="200",vmrange="7.743e+01...8.799e+01"} 1.000000
+http_response_body_bytes_sum{server_port="80",method="GET",path="/",status_code="200"} 81.000000
+http_response_body_bytes_count{server_port="80",method="GET",path="/",status_code="200"} 1.000000
+```
+
+## 📝 Configuration
 
 建议使用 `packetd config > packetd.yaml` 生成一个样例文件并进行修改，样例文件已对各项配置进行了详细说明。
 
-## Protocol
+## 💡 Protocol
 
 支持的协议列表，参见 [./protocol](./protocol)
 
@@ -189,26 +287,26 @@ $ packetd log --pcap.file /tmp/app.pcp --console
 - postgresql
 - redis
 
-## Observation
+## 🔍 Observation
 
 packetd 遵循了 Prometheus 以及 OpenTelemetry 的 Metrics / Traces 使用指南，可通过配置文件的开关选择是否打开数据的上报功能，对于指标提供了 /metrics 接口以及 remotewrite 两种形式。
 
 详细内容参见 [#Obveration](./docs/observation.md)
 
-## Benchmark
+## 🏅 Benchmark
 
 pakcetd 支持的每种协议都进行了压测，并输出了相应的压测报告。
 
 详细内容参见 [#Benchamark](./docs/benchmark.md)
 
-## Limitation
+## 🤔 Limitation
 
-## Roadmap
+## 🗂 Roadmap
 
 - 支持 stats 模式
 - 内置 web 可视化方案
 - kubernetes 部署支持
 
-## License
+## 🔖 License
 
 Apache [©packetd](https://github.com/packetd/packetd/blob/master/LICENSE)
