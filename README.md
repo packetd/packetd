@@ -22,6 +22,7 @@ $ go install github.com/packetd/packetd@latest
 packetd 提供了 agent 和 log 两种运行模式，前者使用 agent 模式持续监听网络包并工作，后者作为一种 cli 工具可以临时 debug 网络请求。
 
 ```shell
+$ packetd
 # packetd is a eBPF-powered network traffic capture and analysis tool
 
 Usage:
@@ -45,7 +46,7 @@ packetd 项目启动需要指定配置文件，log 模式本质上是内置以�
 可以先通过 ifaces 子命令查看支持监听的网卡设备，如：
 
 ```shell
-packetd ifaces
+$ packetd ifaces
 - lo: [127.0.0.1/8 ::1/128]
 - ens160: [172.16.22.128/24 fe80::20c:29ff:fe11:428c/64]
 - docker0: [172.17.0.1/16]
@@ -144,7 +145,7 @@ $ packetd log --ifaces any  --proto 'http;80'
 packetd 捕获了一个完整的 HTTP 请求，并结构化地输出请求明细，考虑到请求体和响应体的内容可能会比较多，这里仅记录了 BodySize，除了输出到 console，还可以输出到指定文件。
 
 ```shell
-packetd log -h
+$ packetd log -h
 Capture and log network traffic roundtrips
 
 Usage:
@@ -270,7 +271,9 @@ http_response_body_bytes_count{server_port="80",method="GET",path="/",status_cod
 
 ## 📝 Configuration
 
-建议使用 `packetd config > packetd.yaml` 生成一个样例文件并进行修改，样例文件已对各项配置进行了详细说明。
+建议使用 `packetd config > packetd.yaml` 命令生成一个样例文件并按需进行调整，样例文件已对各项配置进行了详细说明。
+
+详细配置参见 [#Config Reference](./cmd/static/packetd.reference.yaml)
 
 ## 💡 Protocol
 
@@ -306,6 +309,7 @@ pakcetd 支持的每种协议都进行了压测，并输出了相应的压测报
 - 支持 stats 模式
 - 内置 web 可视化方案
 - kubernetes 部署支持
+- 更多的协议支持
 
 ## 🔖 License
 
