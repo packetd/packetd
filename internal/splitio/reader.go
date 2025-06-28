@@ -15,6 +15,7 @@ package splitio
 
 type Reader struct {
 	r, w    int
+	b       []byte
 	scanner *Scanner
 }
 
@@ -26,6 +27,7 @@ type Reader struct {
 func NewReader(b []byte) *Reader {
 	return &Reader{
 		w:       len(b),
+		b:       b,
 		scanner: NewScanner(b),
 	}
 }
@@ -44,4 +46,11 @@ func (lr *Reader) ReadLine() ([]byte, bool) {
 // EOF 返回 Reader 是否已到达 EOF
 func (lr *Reader) EOF() bool {
 	return lr.r >= lr.w
+}
+
+func (lr *Reader) Last() []byte {
+	if len(lr.b) <= 0 {
+		return nil
+	}
+	return []byte{lr.b[len(lr.b)-1]}
 }

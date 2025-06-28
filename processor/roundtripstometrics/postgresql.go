@@ -63,7 +63,7 @@ func (c *postgresqlConverter) matchLabels(req *ppostgresql.Request, rsp *ppostgr
 }
 
 var postgresqlCommMetrics = commonMetrics{
-	requestTotal:           "postgresql_request_total",
+	requestTotal:           "postgresql_requests_total",
 	requestDurationSeconds: "postgresql_request_duration_seconds",
 	requestBodySizeBytes:   "postgresql_request_body_size_bytes",
 	responseBodySizeBytes:  "postgresql_response_body_size_bytes",

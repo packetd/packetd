@@ -25,13 +25,13 @@ sniffer.ipv4Only: false
 
 sniffer.protocols:
   rules:
-#    - name: "redis"
-#      protocol: "redis"
-#      ports: [6379]
-
-    - name: "http"
-      protocol: "http"
-      ports: [8083]
+    - name: "redis"
+      protocol: "redis"
+      ports: [6379]
+#
+#    - name: "http"
+#      protocol: "http"
+#      ports: [8083]
 
 #    - name: "mysql"
 #      protocol: "mysql"
@@ -72,6 +72,8 @@ processor:
 #          - "request.path"
 #          - "response.status_code"
 
+      redis:
+        requireLabels:
       kafka:
         requireLabels:
           - request.api
@@ -88,9 +90,9 @@ processor:
 #    config:
 
 pipeline:
-  - name: "traces/common"
-    processors:
-      - roundtripstotraces
+#  - name: "traces/common"
+#    processors:
+#      - roundtripstotraces
 
   - name: "metrics/common"
     processors:
