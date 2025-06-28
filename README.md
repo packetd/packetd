@@ -2,7 +2,7 @@
 
 packetd 是一个基于 `libpcap` 的**应用层协议**网络数据无侵观测项目。
 
-packetd 支持从数据流中解析出多种应用协议（HTTP/Grpc/MySQL/Redis/...），使用请求的来回 ***RoundTrip* 作为其核心概念，进而衍生出 **Traces/Metrics** 数据。
+packetd 支持从数据流中解析出多种应用协议（HTTP/Grpc/MySQL/Redis/...），使用请求的来回 ***RoundTrip** 作为其核心概念，进而衍生出 **Traces/Metrics** 数据。
 
 但由于缺乏上下文关联，Traces 仅能代表当次网络情况的情况，无法关联应用层的 Span，更像是一种 Event/Log 类型的数据，只不过以 Traces 的形式组织起来。
 
@@ -67,8 +67,7 @@ $ packetd log --ifaces any  --proto 'http;80'
 {"Request":{"Host":"172.16.22.128","Port":55172,"Method":"GET","Header":{"Accept":["*/*"],"User-Agent":["curl/8.2.1"]},"Proto":"HTTP/1.1","Path":"/","URL":"/","Scheme":"","RemoteHost":"baidu.com","Close":false,"Size":0,"Chunked":false,"Time":"2025-06-28T16:26:39.64617881+08:00"},"Response":{"Host":"182.61.244.181","Port":80,"Header":{"Accept-Ranges":["bytes"],"Cache-Control":["max-age=86400"],"Connection":["Keep-Alive"],"Content-Length":["81"],"Content-Type":["text/html"],"Date":["Sat, 28 Jun 2025 08:26:39 GMT"],"Etag":["\"51-47cf7e6ee8400\""],"Expires":["Sun, 29 Jun 2025 08:26:39 GMT"],"Last-Modified":["Tue, 12 Jan 2010 13:48:00 GMT"],"Server":["Apache"]},"Status":"200 OK","StatusCode":200,"Proto":"HTTP/1.1","Close":false,"Size":81,"Chunked":false,"Time":"2025-06-28T16:26:39.757873402+08:00"},"Duration":"111.694592ms"}
 ```
 
-<details>
-<summary>`jq` 格式化查看：</summary>
+`jq` 格式化查看：
 ```json
 {
     "Request": {
@@ -139,7 +138,6 @@ $ packetd log --ifaces any  --proto 'http;80'
     "Duration": "111.694592ms"
 }
 ```
-</details>
 
 packetd 捕获了一个完整的 HTTP 请求，并结构化地输出请求明细，考虑到请求体和响应体的内容可能会比较多，这里仅记录了 BodySize，除了输出到 console，还可以输出到指定文件。
 
