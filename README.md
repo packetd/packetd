@@ -197,9 +197,11 @@ packetd 遵循了 Prometheus 以及 OpenTelemetry 的 Metrics / Traces 使用指
 
 ## Benchmark
 
-pakcetd 支持的每种协议都进行了压测，并输出了响应的压测报告。
+pakcetd 支持的每种协议都进行了压测，并输出了相应的压测报告。
 
 详细内容参见 [#Benchamark](./docs/benchmark.md)
+
+## Limitation
 
 ## Roadmap
 
