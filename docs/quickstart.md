@@ -4,7 +4,7 @@ packetd 提供了 agent 和 log 两种运行模式，前者使用 agent 模式�
 
 ```shell
 $ packetd
-# packetd is a eBPF-powered network traffic capture and analysis tool
+# packetd is a eBPF-powered network traffic capture and analysis project
 
 Usage:
   packetd [command]
@@ -14,7 +14,7 @@ Available Commands:
   config      Prints the reference configuration
   help        Help about any command
   ifaces      List all available interfaces
-  log         Capture and log network traffic roundtrips
+  log         Capture and log network traffic roundtrip
 
 Flags:
   -h, --help   help for packetd
@@ -128,7 +128,7 @@ packetd 捕获了一个完整的 HTTP 请求，并结构化地输出请求明细
 
 ```shell
 $ packetd log -h
-Capture and log network traffic roundtrips
+Capture and log network traffic roundtrip
 
 Usage:
   packetd log [flags]
@@ -137,16 +137,16 @@ Examples:
 # packetd log --proto 'http;80,8080' --proto 'dns;53' --ifaces any --console
 
 Flags:
-      --console            Enable console logging
-  -h, --help               help for log
-      --ifaces string      Network interfaces to monitor (supports regex), 'any' for all interfaces (default "any")
-      --ipv4               Capture IPv4 traffic only
-      --log.backups int    Maximum number of old log files to retain (default 10)
-      --log.file string    Path to log file (default "roundtrips.log")
-      --log.size int       Maximum size of log file in MB (default 100)
-      --no-promiscuous     Don't put the interface into promiscuous mode
-      --pcap.file string   Path to pcap file to read from
-      --proto strings      Protocols to capture in 'protocol;ports[;host]' format, multiple protocols supported
+      --console                 Enable console logging
+  -h, --help                    help for log
+      --ifaces string           Network interfaces to monitor (supports regex), 'any' for all interfaces (default "any")
+      --ipv4                    Capture IPv4 traffic only
+      --no-promiscuous          Don't put the interface into promiscuous mode
+      --pcap.file string        Path to pcap file to read from
+      --proto strings           Protocols to capture in 'protocol;ports[;host]' format, multiple protocols supported
+      --roundtrip.backups int   Maximum number of old roundtrip files to retain (default 10)
+      --roundtrip.file string   Path to roundtrip file (default "packetd.roundtrip")
+      --roundtrip.size int      Maximum size of roundtrip file in MB (default 100)
 ```
 
 packetd 除了支持从网卡直接捕获网络数据，还支持加载 pcap 文件，如：
@@ -271,5 +271,6 @@ http_request_duration_seconds_bucket{server_port="80",method="GET",path="/",stat
 ```
 
 packetd 支持运行时热重载 Protocol Rules，有两种方式触发重载：
+
 - kill -HUP $pid
 - curl -XPOST $host:$port/-/reload

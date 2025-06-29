@@ -1,0 +1,126 @@
+{
+  "Request": {
+    "Host": "172.16.22.128",
+    "Port": 58384,
+    "Proto": "DNS",
+    "Size": 28,
+    "Time": "2025-06-29T16:06:30.685188701+08:00",
+    "Message": {
+      "Header": {
+        "ID": 2442,
+        "OpCode": "Query",
+        "Status": "Success",
+        "Response": false
+      },
+      "QuestionSec": {
+        "Name": "google.com.",
+        "Type": "A"
+      }
+    }
+  },
+  "Response": {
+    "Host": "172.16.22.2",
+    "Port": 53,
+    "Proto": "DNS",
+    "Size": 292,
+    "Time": "2025-06-29T16:06:30.700680165+08:00",
+    "Message": {
+      "Header": {
+        "ID": 2442,
+        "OpCode": "Query",
+        "Status": "Success",
+        "Response": true
+      },
+      "QuestionSec": {
+        "Name": "google.com.",
+        "Type": "A"
+      },
+      "AnswerSec": [
+        {
+          "Name": "google.com.",
+          "Type": "A",
+          "TTL": 5,
+          "Class": "INET",
+          "Record": "46.82.174.69"
+        }
+      ],
+      "AuthoritySec": [
+        {
+          "Name": "google.com.",
+          "Type": "NS",
+          "Class": "INET",
+          "Record": "ns2.google.com."
+        },
+        {
+          "Name": "google.com.",
+          "Type": "NS",
+          "Class": "INET",
+          "Record": "ns3.google.com."
+        },
+        {
+          "Name": "google.com.",
+          "Type": "NS",
+          "Class": "INET",
+          "Record": "ns1.google.com."
+        },
+        {
+          "Name": "google.com.",
+          "Type": "NS",
+          "Class": "INET",
+          "Record": "ns4.google.com."
+        }
+      ],
+      "AdditionalSec": [
+        {
+          "Name": "ns2.google.com.",
+          "Type": "A",
+          "Class": "INET",
+          "Record": "216.239.34.10"
+        },
+        {
+          "Name": "ns1.google.com.",
+          "Type": "A",
+          "Class": "INET",
+          "Record": "216.239.32.10"
+        },
+        {
+          "Name": "ns3.google.com.",
+          "Type": "A",
+          "Class": "INET",
+          "Record": "216.239.36.10"
+        },
+        {
+          "Name": "ns4.google.com.",
+          "Type": "A",
+          "Class": "INET",
+          "Record": "216.239.38.10"
+        },
+        {
+          "Name": "ns2.google.com.",
+          "Type": "AAAA",
+          "Class": "INET",
+          "Record": "2001:4860:4802:34::a"
+        },
+        {
+          "Name": "ns1.google.com.",
+          "Type": "AAAA",
+          "Class": "INET",
+          "Record": "2001:4860:4802:32::a"
+        },
+        {
+          "Name": "ns3.google.com.",
+          "Type": "AAAA",
+          "Class": "INET",
+          "Record": "2001:4860:4802:36::a"
+        },
+        {
+          "Name": "ns4.google.com.",
+          "Type": "AAAA",
+          "Class": "INET",
+          "Record": "2001:4860:4802:38::a"
+        }
+      ]
+    }
+  },
+  "Duration": "15.491464ms"
+}

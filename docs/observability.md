@@ -2,6 +2,57 @@
 
 ## RoundTrips
 
+Roundtrip 是项目定义的各种协议的结构体，以 HTTP 协议为例：
+
+```go
+// Request HTTP 请求
+//
+// 裁剪了 http.Request 部分字段 大部分字段语义保持一致
+type Request struct {
+	Host       string
+	Port       uint16
+	Method     string
+	Header     http.Header
+	Proto      string
+	Path       string
+	URL        string
+	Scheme     string
+	RemoteHost string
+	Close      bool
+	Size       int
+	Chunked    bool
+	Time       time.Time
+}
+
+// Response HTTP 响应
+//
+// 裁剪了 http.Response 部分字段 大部分字段语义保持一致
+type Response struct {
+	Host       string
+	Port       uint16
+	Header     http.Header
+	Status     string
+	StatusCode int
+	Proto      string
+	Close      bool
+	Size       int
+	Chunked    bool
+	Time       time.Time
+}
+```
+
+所有的协议的定义均可在 [./protocol](../protocol) 目录中找到，下面是所有协议 **JSON 序列化**后的样例展示：
+
+* AMQP: [amqp.json](./roundtrips/amqp.json)
+* DNS: [dns.json](./roundtrips/dns.json)
+* GRPC: [grpc.json](./roundtrips/grpc.json)
+* HTTP: [http.json](./roundtrips/http.json)
+* HTTP2: [http2.json](./roundtrips/http2.json)
+* Kafka: [kafka.json](./roundtrips/kafka.json)
+* MongoDB: [mongodb.json](./roundtrips/mongodb.json)
+* MySQL: [mysql.json](./roundtrips/mysql.json)
+* PostgreSQL: [postgresql.json](./roundtrips/postgresql.json)
+* Redis: [redis.json](./roundtrips/redis.json)
 
 ## Metrics
 
@@ -99,7 +150,6 @@ Labels:
 - source
 - ok
 
-
 ### MySQL
 
 Metrics:
@@ -137,6 +187,5 @@ Metrics:
 
 Labels:
 - command
-- data_type
 
 ## Traces

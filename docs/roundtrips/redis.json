@@ -1,0 +1,19 @@
+{
+  "Request": {
+    "Command": "GET",
+    "Size": 8,
+    "Proto": "Redis",
+    "Host": "127.0.0.1",
+    "Port": 37154,
+    "Time": "2025-06-29T16:07:33.213473975+08:00"
+  },
+  "Response": {
+    "DataType": "BulkStrings",
+    "Size": 102400,
+    "Host": "127.0.0.1",
+    "Proto": "Redis",
+    "Port": 6379,
+    "Time": "2025-06-29T16:07:33.214012335+08:00"
+  },
+  "Duration": "538.36µs"
+}

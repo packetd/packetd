@@ -24,7 +24,7 @@ func init() {
 
 var rootCmd = &cobra.Command{
 	Use:   "packetd",
-	Short: `# packetd is a eBPF-powered network traffic capture and analysis tool`,
+	Short: `# packetd is a eBPF-powered network traffic capture and analysis project`,
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},

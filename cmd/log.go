@@ -29,15 +29,15 @@ import (
 )
 
 type logCmdConfig struct {
-	Console       bool
-	File          string
-	Ifaces        string
-	IPv4Only      bool
-	NoPromiscuous bool
-	LogFile       string
-	LogSize       int
-	LogBackups    int
-	Protocols     []string
+	Console          bool
+	File             string
+	Ifaces           string
+	IPv4Only         bool
+	NoPromiscuous    bool
+	RoundtripFile    string
+	RoundtripSize    int
+	RoundtripBackups int
+	Protocols        []string
 }
 
 type protoConfig struct {
@@ -105,9 +105,9 @@ exporter:
   roundtrips:
     enabled: true
     console: {{ .Console }}
-    filename: {{ .LogFile }}
-    maxSize: {{ .LogSize }}
-    maxBackups: {{ .LogBackups }}
+    filename: {{ .RoundtripFile }}
+    maxSize: {{ .RoundtripSize }}
+    maxBackups: {{ .RoundtripBackups }}
     maxAge: 7
 `
 	tpl, err := template.New("Config").Parse(text)
@@ -117,14 +117,14 @@ exporter:
 
 	var buf bytes.Buffer
 	err = tpl.Execute(&buf, map[string]interface{}{
-		"File":       c.File,
-		"Console":    c.Console,
-		"Ifaces":     c.Ifaces,
-		"IPv4Only":   c.IPv4Only,
-		"Protos":     c.decodeProtoConfig(),
-		"LogFile":    c.LogFile,
-		"LogSize":    c.LogSize,
-		"LogBackups": c.LogBackups,
+		"File":             c.File,
+		"Console":          c.Console,
+		"Ifaces":           c.Ifaces,
+		"IPv4Only":         c.IPv4Only,
+		"Protos":           c.decodeProtoConfig(),
+		"RoundtripFile":    c.RoundtripFile,
+		"RoundtripSize":    c.RoundtripSize,
+		"RoundtripBackups": c.RoundtripBackups,
 	})
 	if err != nil {
 		return nil
@@ -136,7 +136,7 @@ var logConfig logCmdConfig
 
 var logCmd = &cobra.Command{
 	Use:   "log",
-	Short: "Capture and log network traffic roundtrips",
+	Short: "Capture and log network traffic roundtrip",
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg, err := confengine.LoadContent(logConfig.Yaml())
 		if err != nil {
@@ -168,8 +168,8 @@ func init() {
 	logCmd.Flags().StringVar(&logConfig.Ifaces, "ifaces", "any", "Network interfaces to monitor (supports regex), 'any' for all interfaces")
 	logCmd.Flags().StringSliceVar(&logConfig.Protocols, "proto", nil, "Protocols to capture in 'protocol;ports[;host]' format, multiple protocols supported")
 	logCmd.Flags().BoolVar(&logConfig.IPv4Only, "ipv4", false, "Capture IPv4 traffic only")
-	logCmd.Flags().StringVar(&logConfig.LogFile, "log.file", "roundtrips.log", "Path to log file")
-	logCmd.Flags().IntVar(&logConfig.LogSize, "log.size", 100, "Maximum size of log file in MB")
-	logCmd.Flags().IntVar(&logConfig.LogBackups, "log.backups", 10, "Maximum number of old log files to retain")
+	logCmd.Flags().StringVar(&logConfig.RoundtripFile, "roundtrip.file", "packetd.roundtrip", "Path to roundtrip file")
+	logCmd.Flags().IntVar(&logConfig.RoundtripSize, "roundtrip.size", 100, "Maximum size of roundtrip file in MB")
+	logCmd.Flags().IntVar(&logConfig.RoundtripBackups, "roundtrip.backups", 10, "Maximum number of old roundtrip files to retain")
 	rootCmd.AddCommand(logCmd)
 }

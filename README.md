@@ -1,12 +1,13 @@
 # packetd
 
-> packetd 是一个基于 `libpcap` 的**应用层协议**网络数据无侵观测项目。
+> packetd 是一个基于 `ebpf` 的**应用层协议**网络数据无侵观测项目。
 
 packetd 支持从数据流中解析出多种应用协议（HTTP/Grpc/MySQL/Redis/...），使用请求的来回 **RoundTrip** 作为其核心概念，进而衍生出 **Traces/Metrics** 数据。
 
 但由于缺乏上下文关联，Traces 仅能代表当次网络情况的情况，无法关联应用层的 Span，更像是一种 Event/Log 类型的数据，只不过以 Traces 的形式组织起来。
 
 packetd 提供了更加现代化的可观测手段，可以无缝地对接现有的观测体系：
+
 - 支持 Prometheus RemoteWrite 协议上报 Metrics 数据。
 - 支持 VictoriaMetrics VmRange Histogram，无需提前定义 bucket。
 - 支持 OpenTelemetry 协议上报 Traces 数据。
@@ -27,13 +28,13 @@ $ go install github.com/packetd/packetd@latest
 
 ## 📝 Configuration
 
-建议使用 `packetd config > packetd.yaml` 命令生成一个样例文件并按需进行调整，样例文件已对各项配置进行了详细说明。
+建议使用 `packetd config > packetd.yaml` 命令可生成样例文件，并按需进行调整，样例文件已对各项配置进行了详细说明。
 
-详细配置参见 [#Config Reference](./cmd/static/packetd.reference.yaml)
+详细配置参见 [#Config Reference](./cmd/static/packetd.reference.yaml)。
 
 ## 💡 Protocol
 
-支持的协议列表，参见 [./protocol](./protocol)
+支持的协议列表，参见 [#Protocol](./protocol)
 
 - amqp
 - dns
@@ -58,7 +59,7 @@ packetd 遵循了 Prometheus 以及 OpenTelemetry 社区的 Metrics / Traces 设
 
 packetd 支持的每种协议都进行了压测，并输出了相应的压测报告。
 
-详细内容参见 [#Benchamark](./docs/benchmark.md)
+详细内容参见 [#Benchamark](./docs/benchmark.md)。
 
 ## 🤔 Limitation
 

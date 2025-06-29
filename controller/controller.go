@@ -19,6 +19,7 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/common/socket"
@@ -27,6 +28,7 @@ import (
 	"github.com/packetd/packetd/exporter"
 	"github.com/packetd/packetd/internal/labels"
 	"github.com/packetd/packetd/internal/metricstorage"
+	"github.com/packetd/packetd/internal/sigs"
 	"github.com/packetd/packetd/internal/wait"
 	"github.com/packetd/packetd/logger"
 	"github.com/packetd/packetd/pipeline"
@@ -170,6 +172,10 @@ func (c *Controller) setupServer() {
 		return
 	}
 
+	// Metric Routes
+	c.svr.RegisterGetRoute("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		promhttp.Handler().ServeHTTP(w, r)
+	})
 	c.svr.RegisterGetRoute("/protocol/metrics", func(w http.ResponseWriter, r *http.Request) {
 		if c.storage == nil {
 			return
@@ -180,11 +186,24 @@ func (c *Controller) setupServer() {
 		c.storage.WritePrometheus(w)
 	})
 
-	c.svr.RegisterPostRoute("/-/reset", func(w http.ResponseWriter, r *http.Request) {
+	// Admin Routes
+	c.svr.RegisterPostRoute("/-/protocol/reset", func(w http.ResponseWriter, r *http.Request) {
 		if c.storage == nil {
 			return
 		}
 		c.storage.Reset()
+	})
+	c.svr.RegisterPostRoute("/-/logger", func(w http.ResponseWriter, r *http.Request) {
+		level := r.FormValue("level")
+		logger.SetLoggerLevel(level)
+		w.Write([]byte(`{"status": "success"}`))
+	})
+	c.svr.RegisterPostRoute("/-/reload", func(w http.ResponseWriter, r *http.Request) {
+		if err := sigs.SelfReload(); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			return
+		}
 	})
 }
 
