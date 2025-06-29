@@ -13,7 +13,7 @@
     $ curl -XPOST -d 'level=debug' http://locahost:8080/-/logger 
     ```
 
-* POST /-/reload: 运行时重载 operator
+* POST /-/reload: 运行时重载 packetd
 * POST /-/protocol/reset: 清空协议指标
 
 ### 性能分析

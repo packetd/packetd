@@ -12,9 +12,15 @@ packetd 提供了更加现代化的可观测手段，可以无缝地对接现有
 - 支持 VictoriaMetrics VmRange Histogram，无需提前定义 bucket。
 - 支持 OpenTelemetry 协议上报 Traces 数据。
 
-架构设计如下：
+整体架构图如下：
 
 ![arch.png](./docs/images/arch.png)
+
+- 引擎层：负责加载和处理配置数据。
+- 监听层：使用 `libpcap` 监听网卡设备或直接加载 `pcap.file` 读取网络数据包，并交由解析层进行协议解析。
+- 解析层：负责多种协议的网络包数据解析，并生成 roundtrip。
+- 处理层：流式清洗 roundtrip 处理多种协议的 roundtrip 数据（生成 metrics/traces 等）。
+- 上报层：将数据上报到不同的存储后端，或者本地文件输出。
 
 ## 🔰 Installation
 
@@ -62,6 +68,12 @@ packetd 支持的每种协议都进行了压测，并输出了相应的压测报
 详细内容参见 [#Benchamark](./docs/benchmark.md)。
 
 ## 🤔 Limitation
+
+**# Q: 是否一定需要特权模式运行？**
+
+**# Q: 是否能捕获所有完整的协议数据？**
+
+**# Q: 是否跨平台支持所有环境？**
 
 ## 🗂 Roadmap
 

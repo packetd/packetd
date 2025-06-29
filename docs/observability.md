@@ -56,7 +56,7 @@ type Response struct {
 
 ## Metrics
 
-指标使用 Prometheus 命名风格，指标名称均以协议名称作为前缀，同时所有指标都有以下公共维度，下文不再赘述：
+指标使用 Prometheus 命名风格，指标名称均以协议名称作为前缀，同时所有指标都有以下**公共维度**，下文不再赘述：
 
 - client_address
 - client_port
