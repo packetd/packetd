@@ -16,12 +16,14 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/packetd/packetd/confengine"
 	"github.com/packetd/packetd/controller"
 	"github.com/packetd/packetd/internal/sigs"
+	"github.com/packetd/packetd/logger"
 )
 
 var agentCmd = &cobra.Command{
@@ -45,8 +47,30 @@ var agentCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		<-sigs.Terminate()
-		ctr.Stop()
+		var reloadTotal int
+		for {
+			select {
+			case <-sigs.Terminate():
+				ctr.Stop()
+				return
+
+			case <-sigs.Reload():
+				reloadTotal++
+
+				// 需要重新加载配置文件 reload 失败则保持原配置运行
+				cfg, err := confengine.LoadConfigPath(configPath)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "failed to load config (count=%d): %v\n", reloadTotal, err)
+					continue
+				}
+
+				start := time.Now()
+				if err := ctr.Reload(cfg); err != nil {
+					logger.Errorf("failed to reload config: %v", err)
+				}
+				logger.Infof("reload (count=%d) take %s", reloadTotal, time.Since(start))
+			}
+		}
 	},
 	Example: "# packetd agent --config packetd.yaml",
 }

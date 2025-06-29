@@ -52,11 +52,9 @@ type Controller struct {
 	svr  *server.Server
 	snif sniffer.Sniffer
 
+	pps        *portPools
 	storage    *metricstorage.Storage
 	roundtrips chan socket.RoundTrip
-
-	ports map[socket.Port]socket.L7Proto
-	pools map[socket.L7Proto]protocol.ConnPool
 }
 
 func setupLogger(conf *confengine.Config) error {
@@ -112,19 +110,9 @@ func New(conf *confengine.Config) (*Controller, error) {
 		return nil, err
 	}
 
-	ports := make(map[socket.Port]socket.L7Proto)
-	pools := make(map[socket.L7Proto]protocol.ConnPool)
-	for _, pp := range snif.L7Ports() {
-		for _, port := range pp.Ports {
-			ports[port] = pp.Proto
-			if _, ok := pools[pp.Proto]; !ok {
-				f, err := protocol.Get(pp.Proto)
-				if err != nil {
-					return nil, err
-				}
-				pools[pp.Proto] = f()
-			}
-		}
+	pps, err := newPortPools(snif.L7Ports())
+	if err != nil {
+		return nil, err
 	}
 
 	var cfg Config
@@ -139,23 +127,12 @@ func New(conf *confengine.Config) (*Controller, error) {
 		cfg:        cfg,
 		pl:         pl,
 		snif:       snif,
-		pools:      pools,
-		ports:      ports,
+		pps:        pps,
 		svr:        svr,
 		exp:        exp,
 		storage:    storage,
 		roundtrips: roundtrips,
 	}, nil
-}
-
-func (c *Controller) decideProto(st socket.Tuple) (socket.Port, protocol.ConnPool) {
-	if p, ok := c.ports[st.SrcPort]; ok {
-		return st.SrcPort, c.pools[p]
-	}
-	if p, ok := c.ports[st.DstPort]; ok {
-		return st.DstPort, c.pools[p]
-	}
-	return 0, nil
 }
 
 func (c *Controller) Start() error {
@@ -170,7 +147,7 @@ func (c *Controller) Start() error {
 	}
 
 	c.snif.SetOnL4Packet(func(pkt socket.L4Packet) {
-		port, pool := c.decideProto(pkt.SocketTuple())
+		port, pool := c.pps.DecideProto(pkt.SocketTuple())
 		if pool == nil {
 			return
 		}
@@ -197,11 +174,9 @@ func (c *Controller) setupServer() {
 		if c.storage == nil {
 			return
 		}
-		for _, pool := range c.pools {
-			pool.OnStats(func(stats connstream.TupleStats) {
-				c.updatePoolPromMetrics(stats)
-			})
-		}
+		c.pps.RangePoolStats(func(stats connstream.TupleStats) {
+			c.updatePoolPromMetrics(stats)
+		})
 		c.storage.WritePrometheus(w)
 	})
 
@@ -248,9 +223,19 @@ func (c *Controller) updatePoolPromMetrics(stats connstream.TupleStats) {
 	)
 }
 
-// TODO(mando): 待实现 需要考虑到配置以及 sniffer 的热更新
-func (c *Controller) Reload() error {
-	return nil
+// Reload 重载配置
+//
+// - 重载 sniffer，仅支持重新编译 protocols rule
+func (c *Controller) Reload(conf *confengine.Config) error {
+	var cfg sniffer.Config
+	if err := conf.UnpackChild("sniffer", &cfg); err != nil {
+		return err
+	}
+
+	if err := c.snif.Reload(&cfg); err != nil {
+		return err
+	}
+	return c.pps.Reload(c.snif.L7Ports())
 }
 
 func (c *Controller) Stop() {

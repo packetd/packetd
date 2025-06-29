@@ -189,6 +189,11 @@ func (cp *connPool) Clean() {
 	if cp.frozen != nil {
 		cp.frozen.Close()
 	}
+
+	for st, conn := range cp.conns {
+		conn.Free()
+		delete(cp.conns, st)
+	}
 }
 
 func (cp *connPool) getConnLocked(st socket.Tuple) Conn {

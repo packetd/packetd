@@ -202,6 +202,7 @@ func (ps *pcapSniffer) Reload(conf *sniffer.Config) error {
 			return err
 		}
 	}
+	ps.conf = conf
 	return nil
 }
 

@@ -92,7 +92,9 @@ func (ps Protocols) CompileBPFFilter() (string, error) {
 		}
 		filters = append(filters, s)
 	}
-	return strings.Join(filters, " or "), nil
+
+	bpfFilter := strings.Join(filters, " or ")
+	return bpfFilter, nil
 }
 
 // L7Ports 将协议规则转换为端口列表

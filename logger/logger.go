@@ -105,7 +105,7 @@ func New(opt Options) Logger {
 
 	level := toZapLevel(opt.Level)
 	core := zapcore.NewCore(encoder, w, level)
-	logger := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1))
+	logger := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(2))
 	return Logger{
 		sugared: logger.Sugar(),
 	}
