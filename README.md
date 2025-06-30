@@ -24,6 +24,24 @@ packetd 提供了更加现代化的可观测手段，可以无缝地对接现有
 
 ## 🔰 Installation
 
+packetd 使用 `libpcap` 作为其底层监听网络包监听方案，因此先安装该依赖库（大部分操作系统已内置）。
+
+**Debian/Ubuntu**
+
+```shell
+$ sudo apt-get install libpcap-dev
+```
+
+**CentOS/Fedora**
+
+```shell
+$ sudo yum install libpcap libpcap-devel
+```
+
+**Windows**
+
+Windows 系统需要先安装 [npcap](https://nmap.org/npcap/)。
+
 ```shell
 $ go install github.com/packetd/packetd@latest
 ```
@@ -32,10 +50,13 @@ $ go install github.com/packetd/packetd@latest
 
 packetd 支支持 `log` 和 `agent` 两种运行模式。
 
-<div align="center">
-<img src="./docs/images/log-mode.png" width="48%" alt="log-mode"/>
-<img src="./docs/images/agent-mode.png" width=48%" alt="agent-mode"/>
-</div>
+**log mode**
+
+![log-mode](./docs/images/log-mode.png)
+
+**agent mode*
+
+![agent-mode](./docs/images/agent-mode.png)
 
 详细内容参见 [#Quickstart](./docs/quickstart.md)。
 
@@ -82,22 +103,43 @@ packetd 支持的每种协议都进行了压测，并输出了相应的压测报
 
 详细内容参见 [#Benchamark](./docs/benchmark.md)。
 
-## 🤔 Limitation
+## 🤔 FQA
 
 ***# Q: 是否能处理 TCP 数据流丢包重组问题？***
 
 **不能。**
 
-packetd 的解析**完全流式**，这也是 packetd 有较好性能的原因（性能优化细节可参考 ![benchmark](./docs/benchmark.md)）。
+packetd 是**完全流式**的解析，这也是 packetd 有较好性能的原因（性能优化细节可参考 [benchmark](./docs/benchmark.md)）。
 
 - 缓存数据包会占用大量的内存，packetd 是面对海量网络流量而设计的，如果要缓存所有数据流的 TCP 包，作为 agent 这个开销几乎是不可接受的。
-- 会大幅增加代码的复杂度，TCP 包重组是内核的 TCP 栈实现的，相当于要在应用层实现一套同样的逻辑，且 packetd 进程是不持有 FD 的，缺乏一些关键的上下文信息，实现难度大。
+- 会大幅增加代码的复杂度，数据包重组是内核的 TCP 栈实现的，相当于要在应用层实现一套同样的逻辑，且 packetd 进程是不持有 FD 的，缺乏一些关键的上下文信息，实现难度大。
 
-因此在网络较差的环境中，丢包率可能会上升，部分协议解析 **Roundtrip** 的达成率会明显下降，此时 Layer4 的指标会体现为重复 ack 的数据包明显上涨。
+packetd 使用 `libpcap` 监听了网卡，因此在网络较差的环境中，丢包率可能会上升，协议解析 **Roundtrip** 的达成率会【明显下降】。此时 Layer4 的指标会体现为重复 ack 序号的数据包明显上升。
 
-***# Q2: 是否一定需要特权模式运行？***
+***# Q: 为什么选择了 libpcap 而不是更现代的 xdp/tc 等方案？***
 
-***# Q: 是否跨平台支持所有环境？***
+**兼容性考量**
+
+libpcap 几乎支持了所有的主流 Linux 发行版（Linux2.2+），不存在兼容性问题，而像 xdp/tc 有较高的内核版本要求。
+
+以下表格来自 [pktstat-bpf](https://github.com/dkorunic/pktstat-bpf/blob/main/README.md) 项目文档。
+
+> The following table maps features, requirements and expected performance for described modes:
+
+| Capture type                                        | Ingress | Egress | Performance    | Process tracking | Kernel required | SmartNIC required |
+| --------------------------------------------------- | ------- | ------ | -------------- | ---------------- | --------------- | ----------------- |
+| Generic [PCAP](https://github.com/dkorunic/pktstat) | Yes     | Yes    | Low            | No               | Any             | No                |
+| [AF_PACKET](https://github.com/dkorunic/pktstat)    | Yes     | Yes    | Medium         | No               | v2.2            | No                |
+| KProbes                                             | Yes     | Yes    | Medium+        | **Yes**          | v4.1            | No                |
+| CGroup (SKB)                                        | Yes     | Yes    | Medium+        | Partial          | v4.10           | No                |
+| TC (SchedACT)                                       | Yes     | Yes    | **High**       | No               | v6.6            | No                |
+| XDP Generic                                         | Yes     | **No** | **High**       | No               | v5.9            | No                |
+| XDP Native                                          | Yes     | **No** | **Very high**  | No               | v5.9            | No                |
+| XDP Offloaded                                       | Yes     | **No** | **Wire speed** | No               | v5.9            | **Yes**           |
+
+packetd 也尝试过 XDP 的方案（预留了 Sniffer Interface，后续可以扩展），但性能对于 `AF_PACKET` **没有量级上的提升**，最终在 Linux 上还是仅保留了 `AF_PACKE` 方案。
+
+对于非 Linux 系统（Windows/Darwin/..），使用 `PCAP` 方案也都能支持。综合评估下来，`libpcap` 是一个可接受的方案。
 
 ## 🗂 Roadmap
 
