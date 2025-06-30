@@ -58,6 +58,8 @@ func (c *httpConverter) Convert(rt socket.RoundTrip) ptrace.Span {
 	attr.PutStr("url.scheme", req.Scheme)
 	attr.PutStr("server.address", rsp.Host)
 	attr.PutInt("server.port", int64(rsp.Port))
+	attr.PutStr("client.remote.host", req.RemoteHost)
+
 	attr.PutStr("network.peer.address", req.Host)
 	attr.PutInt("network.peer.port", int64(req.Port))
 	attr.PutStr("network.transport", "tcp")

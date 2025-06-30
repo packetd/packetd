@@ -1,7 +1,5 @@
 # Benchmark
 
-## Overview
-
 benchmark 代码位于 [packetd-benchmark](https://github.com/packetd/packetd)。压测环境为 Linux 6.11.9-100.fc39.aarch64 (4C4G)。
 
 Header 字段含义:

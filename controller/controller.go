@@ -148,6 +148,7 @@ func (c *Controller) Start() error {
 		go c.svr.ListenAndServe()
 	}
 
+	c.exp.Start()
 	c.snif.SetOnL4Packet(func(pkt socket.L4Packet) {
 		port, pool := c.pps.DecideProto(pkt.SocketTuple())
 		if pool == nil {
@@ -259,6 +260,7 @@ func (c *Controller) Reload(conf *confengine.Config) error {
 
 func (c *Controller) Stop() {
 	c.snif.Close()
+	c.exp.Close()
 	c.cancel()
 }
 

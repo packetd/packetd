@@ -29,9 +29,9 @@ sniffer.protocols:
       protocol: "redis"
       ports: [6379]
 #
-#    - name: "http"
-#      protocol: "http"
-#      ports: [8083]
+    - name: "http"
+      protocol: "http"
+      ports: [80]
 
 #    - name: "mysql"
 #      protocol: "mysql"
@@ -66,14 +66,15 @@ processor:
     config:
       http:
         requireLabels:
-#          - "server.host"
-#          - "server.port"
-#          - "request.method"
-#          - "request.path"
-#          - "response.status_code"
+          - "server.host"
+          - "server.port"
+          - "request.method"
+          - "request.path"
+          - "response.status_code"
 
       redis:
         requireLabels:
+
       kafka:
         requireLabels:
           - request.api
@@ -90,9 +91,9 @@ processor:
 #    config:
 
 pipeline:
-#  - name: "traces/common"
-#    processors:
-#      - roundtripstotraces
+  - name: "traces/common"
+    processors:
+      - roundtripstotraces
 
   - name: "metrics/common"
     processors:
@@ -101,12 +102,12 @@ pipeline:
 metricsStorage:
   enabled: true
   expired: 5m
-  vmHistogram: true
+  vmHistogram: false
 
 exporter:
   traces:
-    enabled: false
-    endpoint: http://localhost:4318/v1/traces
+    enabled: true 
+    endpoint: http://172.16.22.128:4318/v1/traces
     batch: 10
     interval: 3s
 
@@ -116,7 +117,7 @@ exporter:
     interval: 1m
 
   roundtrips:
-    enabled: false
+    enabled: true 
     console: true
     filename: "roundtrips.log"
     maxSize: 100

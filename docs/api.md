@@ -10,7 +10,7 @@
 * POST /-/logger: 运行时动态调整 logger level
 
     ```shell
-    $ curl -XPOST -d 'level=debug' http://locahost:8080/-/logger 
+    $ curl -XPOST -d 'level=debug' http://locahost:9091/-/logger 
     ```
 
 * POST /-/reload: 运行时重载 packetd
