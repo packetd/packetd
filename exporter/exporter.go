@@ -106,7 +106,6 @@ func (e *Exporter) Close() {
 	}
 
 	e.metricsStorage.Close()
-	e.tracesSinker.Close()
 }
 
 func (e *Exporter) Export(record *common.Record) {

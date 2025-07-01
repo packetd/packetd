@@ -190,7 +190,7 @@ func DecodeIPLayer(b []byte, ipv4Only bool) ([]byte, gopacket.Layer, error) {
 	// 1) Ethernet Layer
 	// 2) IP Layer
 	// 3) TCP/UDP Layer
-	content, err := decodeIPLayer(b)
+	content, ipv, err := decodeIPLayer(b)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -200,16 +200,18 @@ func DecodeIPLayer(b []byte, ipv4Only bool) ([]byte, gopacket.Layer, error) {
 	var ipv4 layers.IPv4
 	var ipv6 layers.IPv6
 
-	if err := ipv4.DecodeFromBytes(content, gopacket.NilDecodeFeedback); err == nil {
-		payload = ipv4.Payload
-		lyr = &ipv4
-	}
-
-	// 支持只监听 ipv4 的网卡 IP
-	if len(payload) == 0 && !ipv4Only {
-		if err := ipv6.DecodeFromBytes(content, gopacket.NilDecodeFeedback); err == nil {
-			payload = ipv6.Payload
-			lyr = &ipv6
+	switch ipv {
+	case layerIpv4:
+		if err := ipv4.DecodeFromBytes(content, gopacket.NilDecodeFeedback); err == nil {
+			payload = ipv4.Payload
+			lyr = &ipv4
+		}
+	case layerIpv6:
+		if !ipv4Only {
+			if err := ipv6.DecodeFromBytes(content, gopacket.NilDecodeFeedback); err == nil {
+				payload = ipv6.Payload
+				lyr = &ipv6
+			}
 		}
 	}
 
@@ -220,24 +222,40 @@ func DecodeIPLayer(b []byte, ipv4Only bool) ([]byte, gopacket.Layer, error) {
 	return payload, lyr, nil
 }
 
+const (
+	layerIpv4 uint8 = iota
+	layerIpv6
+)
+
 // decodeIPLayer 解析 IP 层协议
 //
 // OpenBSD style 系统需要额外判断处理 loopback 网卡
-func decodeIPLayer(b []byte) ([]byte, error) {
+func decodeIPLayer(b []byte) ([]byte, uint8, error) {
 	var err error
 	var ether layers.Ethernet
 	if err = ether.DecodeFromBytes(b, gopacket.NilDecodeFeedback); err == nil {
 		switch ether.EthernetType {
-		case layers.EthernetTypeIPv4, layers.EthernetTypeIPv6:
-			return ether.Payload, nil
+		case layers.EthernetTypeIPv4:
+			return ether.Payload, layerIpv4, nil
+		case layers.EthernetTypeIPv6:
+			return ether.Payload, layerIpv6, nil
 		}
 	}
 
 	if runtime.GOOS != "linux" && runtime.GOOS != "windows" {
 		var lb layers.Loopback
-		if err = lb.DecodeFromBytes(b, gopacket.NilDecodeFeedback); err == nil {
-			return lb.Payload, nil
+		err = lb.DecodeFromBytes(b, gopacket.NilDecodeFeedback)
+		if err != nil {
+			return nil, 0, err
+		}
+		switch lb.NextLayerType() {
+		case layers.LayerTypeIPv4:
+			return lb.Payload, layerIpv4, nil
+		case layers.LayerTypeIPv6:
+			return lb.Payload, layerIpv6, nil
+		default:
+			return nil, 0, errors.New("unknown loopback nextLayer")
 		}
 	}
-	return nil, err
+	return nil, 0, err
 }

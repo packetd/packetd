@@ -25,29 +25,29 @@ sniffer.ipv4Only: false
 
 sniffer.protocols:
   rules:
-    - name: "redis"
-      protocol: "redis"
-      ports: [6379]
-#
-    - name: "http"
-      protocol: "http"
-      ports: [80]
+#    - name: "redis"
+#      protocol: "redis"
+#      ports: [6379]
+
+#    - name: "http"
+#      protocol: "http"
+#      ports: [8083]
 
 #    - name: "mysql"
 #      protocol: "mysql"
 #      ports: [3306]
 
-#    - name: "grpc"
-#      protocol: "grpc"
-#      port: [8085]
+    - name: "grpc"
+      protocol: "grpc"
+      ports: [8085]
 
 #    - name: dns
 #      protocol: "dns"
-#      port: [53]
+#      ports: [53]
 
 #    - name: mongodb
 #      protocol: "mongodb"
-#      port: [27017]
+#      ports: [27017]
 
 #    - name: "postgresql"
 #      protocol: "postgresql"
@@ -106,7 +106,7 @@ metricsStorage:
 
 exporter:
   traces:
-    enabled: true 
+    enabled: false
     endpoint: http://172.16.22.128:4318/v1/traces
     batch: 10
     interval: 3s
@@ -117,7 +117,7 @@ exporter:
     interval: 1m
 
   roundtrips:
-    enabled: true 
+    enabled: false
     console: true
     filename: "roundtrips.log"
     maxSize: 100
