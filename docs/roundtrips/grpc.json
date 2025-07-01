@@ -1,0 +1,42 @@
+{
+  "Request": {
+    "StreamID": 1,
+    "Host": "::1",
+    "Port": 35138,
+    "Proto": "gRPC",
+    "Service": "pb.Benchmark.Size",
+    "Scheme": "http",
+    "Target": "localhost:8085",
+    "Metadata": {
+      "Content-Type": [
+        "application/grpc"
+      ],
+      "Grpc-Timeout": [
+        "995177u"
+      ],
+      "Te": [
+        "trailers"
+      ],
+      "User-Agent": [
+        "grpc-go/1.71.0"
+      ]
+    },
+    "Size": 111,
+    "Time": "2025-07-01T14:02:52.513870233+08:00"
+  },
+  "Response": {
+    "StreamID": 1,
+    "Host": "::1",
+    "Port": 8085,
+    "Proto": "gRPC",
+    "Status": "200",
+    "Metadata": {
+      "Content-Type": [
+        "application/grpc"
+      ]
+    },
+    "Size": 102528,
+    "Time": "2025-07-01T14:02:52.515809153+08:00"
+  },
+  "Duration": "1.93892ms"
+}

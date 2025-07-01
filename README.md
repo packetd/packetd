@@ -97,6 +97,10 @@ packetd 遵循了 Prometheus 以及 OpenTelemetry 社区的 Metrics / Traces 设
 
 详细内容参见 [#Observability](./docs/observability.md)。
 
+**ELK Stack**
+
+![elk](./docs/images/kibana.png)
+
 ## 🏅 Benchmark
 
 packetd 支持的每种协议都进行了压测，并输出了相应的压测报告。
@@ -111,16 +115,16 @@ packetd 支持的每种协议都进行了压测，并输出了相应的压测报
 
 packetd 是**完全流式**的解析，这也是 packetd 有较好性能的原因（性能优化细节可参考 [benchmark](./docs/benchmark.md)）。
 
-- 缓存数据包会占用大量的内存，packetd 是面对海量网络流量而设计的，如果要缓存所有数据流的 TCP 包，作为 agent 这个开销几乎是不可接受的。
+- 缓存数据包会占用大量的内存，packetd 是面对海量网络流量而设计的。作为 agent 如果要缓存所有数据流的 TCP 包，那么这个开销几乎是不可接受的。
 - 会大幅增加代码的复杂度，数据包重组是内核的 TCP 栈实现的，相当于要在应用层实现一套同样的逻辑，且 packetd 进程是不持有 FD 的，缺乏一些关键的上下文信息，实现难度大。
 
-packetd 使用 `libpcap` 监听了网卡，因此在网络较差的环境中，丢包率可能会上升，协议解析 **Roundtrip** 的达成率会【明显下降】。此时 Layer4 的指标会体现为重复 ack 序号的数据包明显上升。
+packetd 使用 `libpcap` 监听了网卡，因此在网络较差的环境中，丢包率可能会上升，协议解析 **Roundtrip** 的达成率会**明显下降**。此时 Layer4 的指标会体现为重复 ack 序号的数据包明显上升。
 
-***# Q: 为什么选择了 libpcap 而不是更现代的 xdp/tc 等方案？***
+***# Q: 为什么选择了 libpcap 而不是更现代的 XDP/TC 等方案？***
 
 **兼容性考量**
 
-libpcap 几乎支持了所有的主流 Linux 发行版（Linux2.2+），不存在兼容性问题，而像 xdp/tc 有较高的内核版本要求。
+libpcap 几乎支持了所有的主流 Linux 发行版（Linux2.2+），不存在兼容性问题，而像 XDP/TC 有较高的内核版本要求。
 
 以下表格来自 [pktstat-bpf](https://github.com/dkorunic/pktstat-bpf/blob/main/README.md) 项目文档。
 
@@ -137,9 +141,11 @@ libpcap 几乎支持了所有的主流 Linux 发行版（Linux2.2+），不存�
 | XDP Native                                          | Yes     | **No** | **Very high**  | No               | v5.9            | No                |
 | XDP Offloaded                                       | Yes     | **No** | **Wire speed** | No               | v5.9            | **Yes**           |
 
-packetd 也尝试过 XDP 的方案（预留了 Sniffer Interface，后续可以扩展），但性能对于 `AF_PACKET` **没有量级上的提升**，最终在 Linux 上还是仅保留了 `AF_PACKE` 方案。
+packetd 也尝试过 XDP 的方案，但性能对于 `AF_PACKET` **没有量级上的提升**，最终在 Linux 上还是仅保留了 `AF_PACKE` 方案。
 
-对于非 Linux 系统（Windows/Darwin/..），使用 `PCAP` 方案也都能支持。综合评估下来，`libpcap` 是一个可接受的方案。
+对于非 Linux 系统（Windows/Darwin/..），`PCAP` 方案均能支持。综合评估下来，`libpcap` 是一个可接受的方案。
+
+*Note: packetd 可能需要特权模式运行，如果报错可尝试使用 sysadmin 权限运行。*
 
 ## 🗂 Roadmap
 
