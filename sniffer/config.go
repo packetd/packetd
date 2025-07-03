@@ -29,6 +29,7 @@ type Config struct {
 	IPv4Only      bool      `config:"ipv4Only"`
 	Protocols     Protocols `config:"protocols"`
 	NoPromiscuous bool      `config:"noPromiscuous"`
+	BlockNum      int       `config:"blockNum"`
 }
 
 type ProtoRule struct {

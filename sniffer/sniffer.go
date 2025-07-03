@@ -28,6 +28,13 @@ import (
 // OnL4Packet 触发 L4Packet 的解析回调
 type OnL4Packet func(pkt socket.L4Packet)
 
+// Stats 统计数据
+type Stats struct {
+	Name    string // 设备名称
+	Packets uint   // 收包数量
+	Drops   uint   // 丢包数量
+}
+
 // Sniffer 负责实现网络数据包的嗅探并调用 On* 函数进行处理
 type Sniffer interface {
 	// Name 返回 Sniffer 名称
@@ -41,6 +48,9 @@ type Sniffer interface {
 
 	// L7Ports 返回当前应用层端口及协议列表
 	L7Ports() []socket.L7Ports
+
+	// Stats 返回 sniffer 统计数据
+	Stats() []Stats
 
 	// Close 关闭 Sniffer 并释放关联资源
 	Close()
@@ -185,41 +195,53 @@ func parsePacket(ts time.Time, lyrs ...gopacket.Layer) socket.L4Packet {
 // DecodeIPLayer 解析 IP 层
 //
 // 返回数据包 Payload 以及所处 Layer
-func DecodeIPLayer(b []byte, ipv4Only bool) ([]byte, gopacket.Layer, error) {
+func DecodeIPLayer(b []byte, ipv4Only bool) ([]byte, gopacket.Layer, gopacket.LayerType, error) {
 	// decode packets followed by layers
 	// 1) Ethernet Layer
 	// 2) IP Layer
 	// 3) TCP/UDP Layer
 	content, ipv, err := decodeIPLayer(b)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, 0, err
 	}
 
 	var lyr gopacket.Layer
+	var next gopacket.LayerType
 	var payload []byte
-	var ipv4 layers.IPv4
-	var ipv6 layers.IPv6
 
 	switch ipv {
 	case layerIpv4:
-		if err := ipv4.DecodeFromBytes(content, gopacket.NilDecodeFeedback); err == nil {
-			payload = ipv4.Payload
-			lyr = &ipv4
+		var ipLayer layers.IPv4
+		err := ipLayer.DecodeFromBytes(content, gopacket.NilDecodeFeedback)
+		if err != nil {
+			return nil, nil, 0, err
 		}
+
+		payload = ipLayer.Payload
+		lyr = &ipLayer
+		next = ipLayer.NextLayerType()
+
 	case layerIpv6:
-		if !ipv4Only {
-			if err := ipv6.DecodeFromBytes(content, gopacket.NilDecodeFeedback); err == nil {
-				payload = ipv6.Payload
-				lyr = &ipv6
-			}
+		if ipv4Only {
+			return nil, nil, 0, nil
 		}
+
+		var ipLayer layers.IPv6
+		err := ipLayer.DecodeFromBytes(content, gopacket.NilDecodeFeedback)
+		if err != nil {
+			return nil, nil, 0, err
+		}
+
+		payload = ipLayer.Payload
+		lyr = &ipLayer
+		next = ipLayer.NextLayerType()
 	}
 
 	if lyr == nil || len(payload) == 0 {
-		return nil, nil, nil
+		return nil, nil, 0, nil
 	}
 
-	return payload, lyr, nil
+	return payload, lyr, next, nil
 }
 
 const (

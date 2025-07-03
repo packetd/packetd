@@ -168,6 +168,13 @@ func (c *Controller) Start() error {
 	return nil
 }
 
+func (c *Controller) recordMetrics() {
+	for _, s := range c.snif.Stats() {
+		snifferReceivedPackets.WithLabelValues(s.Name).Set(float64(s.Packets))
+		snifferDroppedPackets.WithLabelValues(s.Name).Set(float64(s.Drops))
+	}
+}
+
 func (c *Controller) setupServer() {
 	if c.svr == nil {
 		return
@@ -175,6 +182,7 @@ func (c *Controller) setupServer() {
 
 	// Metric Routes
 	c.svr.RegisterGetRoute("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		c.recordMetrics()
 		promhttp.Handler().ServeHTTP(w, r)
 	})
 	c.svr.RegisterGetRoute("/protocol/metrics", func(w http.ResponseWriter, r *http.Request) {

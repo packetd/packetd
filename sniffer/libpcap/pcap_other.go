@@ -144,30 +144,34 @@ func (ps *pcapSniffer) getHandle(device, bpfFilter string) (*pcap.Handle, error)
 }
 
 func (ps *pcapSniffer) parsePacket(packet gopacket.Packet) {
-	payload, lyr, err := sniffer.DecodeIPLayer(packet.Data(), ps.conf.IPv4Only)
+	payload, lyr, next, err := sniffer.DecodeIPLayer(packet.Data(), ps.conf.IPv4Only)
 	if err != nil {
 		return
 	}
 
-	var tcpPkt layers.TCP
-	err = tcpPkt.DecodeFromBytes(payload, gopacket.NilDecodeFeedback)
-	if err == nil {
+	switch next {
+	case layers.LayerTypeTCP:
+		var tcpPkt layers.TCP
+		err := tcpPkt.DecodeFromBytes(payload, gopacket.NilDecodeFeedback)
+		if err != nil {
+			return
+		}
 		if l4pkt := sniffer.ParseTCPPacket(time.Now(), lyr, &tcpPkt); l4pkt != nil {
 			if ps.onL4Packet != nil {
 				ps.onL4Packet(l4pkt)
 			}
 		}
-		return
-	}
 
-	var udpPkt layers.UDP
-	err = udpPkt.DecodeFromBytes(payload, gopacket.NilDecodeFeedback)
-	if err != nil {
-		return
-	}
-	if l4pkt := sniffer.ParseUDPDatagram(time.Now(), lyr, &udpPkt); l4pkt != nil {
-		if ps.onL4Packet != nil {
-			ps.onL4Packet(l4pkt)
+	case layers.LayerTypeUDP:
+		var udpPkt layers.UDP
+		err := udpPkt.DecodeFromBytes(payload, gopacket.NilDecodeFeedback)
+		if err != nil {
+			return
+		}
+		if l4pkt := sniffer.ParseUDPDatagram(time.Now(), lyr, &udpPkt); l4pkt != nil {
+			if ps.onL4Packet != nil {
+				ps.onL4Packet(l4pkt)
+			}
 		}
 	}
 }
@@ -190,6 +194,22 @@ func (ps *pcapSniffer) listen(ph *handler) {
 			ps.parsePacket(packet)
 		}
 	}
+}
+
+func (ps *pcapSniffer) Stats() []sniffer.Stats {
+	lst := make([]sniffer.Stats, 0, len(ps.handlers))
+	for _, ph := range ps.handlers {
+		stats, err := ph.handle.Stats()
+		if err != nil {
+			continue
+		}
+		lst = append(lst, sniffer.Stats{
+			Name:    ph.name,
+			Packets: uint(stats.PacketsReceived),
+			Drops:   uint(stats.PacketsDropped),
+		})
+	}
+	return lst
 }
 
 func (ps *pcapSniffer) Reload(conf *sniffer.Config) error {

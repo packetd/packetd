@@ -129,8 +129,24 @@ func (ps *pcapSniffer) makeHandlers() error {
 	return nil
 }
 
+// verifyBlockNum 验证 blockNum 的合法性
+//
+// blockNum 仅能为 defaultBlockNum 的整数倍
+func verifyBlockNum(n, def int) int {
+	// 最小值为 defaultBlockNum
+	if n < def {
+		return def
+	}
+
+	// 非整数倍使用默认值
+	if n%def != 0 {
+		return def
+	}
+	return n
+}
+
 func (ps *pcapSniffer) getTpacket(device string) (*afpacket.TPacket, error) {
-	blockNumOpt := afpacket.OptNumBlocks(defaultBlockNum)
+	blockNumOpt := afpacket.OptNumBlocks(verifyBlockNum(ps.conf.BlockNum, defaultBlockNum))
 	pollTimeout := afpacket.OptPollTimeout(defaultPollTimeout)
 
 	if device == deviceAny {
@@ -157,30 +173,36 @@ func (ps *pcapSniffer) setBPFFilter(tp *afpacket.TPacket, filter string) error {
 }
 
 func (ps *pcapSniffer) parsePacket(pkt []byte, ts time.Time) {
-	payload, lyr, err := sniffer.DecodeIPLayer(pkt, ps.conf.IPv4Only)
+	payload, lyr, next, err := sniffer.DecodeIPLayer(pkt, ps.conf.IPv4Only)
 	if err != nil || lyr == nil {
 		return
 	}
 
-	var tcpPkt layers.TCP
-	err = tcpPkt.DecodeFromBytes(payload, gopacket.NilDecodeFeedback)
-	if err == nil {
+	switch next {
+	case layers.LayerTypeTCP:
+		var tcpPkt layers.TCP
+		err := tcpPkt.DecodeFromBytes(payload, gopacket.NilDecodeFeedback)
+		if err != nil {
+			return
+		}
+
 		if l4pkt := sniffer.ParseTCPPacket(ts, lyr, &tcpPkt); l4pkt != nil {
 			if ps.onL4Packet != nil {
 				ps.onL4Packet(l4pkt)
 			}
 		}
-		return
-	}
 
-	var udpPkt layers.UDP
-	err = udpPkt.DecodeFromBytes(payload, gopacket.NilDecodeFeedback)
-	if err != nil {
-		return
-	}
-	if l4pkt := sniffer.ParseUDPDatagram(ts, lyr, &udpPkt); l4pkt != nil {
-		if ps.onL4Packet != nil {
-			ps.onL4Packet(l4pkt)
+	case layers.LayerTypeUDP:
+		var udpPkt layers.UDP
+		err := udpPkt.DecodeFromBytes(payload, gopacket.NilDecodeFeedback)
+		if err != nil {
+			return
+		}
+
+		if l4pkt := sniffer.ParseUDPDatagram(ts, lyr, &udpPkt); l4pkt != nil {
+			if ps.onL4Packet != nil {
+				ps.onL4Packet(l4pkt)
+			}
 		}
 	}
 }
@@ -237,6 +259,22 @@ func (ps *pcapSniffer) listenPcapFile(ph *handler) {
 			ps.parsePacket(packet.Data(), time.Now())
 		}
 	}
+}
+
+func (ps *pcapSniffer) Stats() []sniffer.Stats {
+	lst := make([]sniffer.Stats, 0, len(ps.handlers))
+	for _, ph := range ps.handlers {
+		_, stats, err := ph.handle.SocketStats()
+		if err != nil {
+			continue
+		}
+		lst = append(lst, sniffer.Stats{
+			Name:    ph.name,
+			Packets: stats.Packets(),
+			Drops:   stats.Drops(),
+		})
+	}
+	return lst
 }
 
 func (ps *pcapSniffer) Reload(conf *sniffer.Config) error {

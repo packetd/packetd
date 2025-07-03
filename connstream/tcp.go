@@ -130,12 +130,29 @@ func (s *tcpStream) Write(pkt socket.L4Packet, decodeFunc DecodeFunc) error {
 		payload = payload[delta:]
 
 	case s.lastAck < seq:
-		// stream 监听到的第一个 segment 已经是在一个数据流中间
-		// 不做处理 直接提交给应用层
-		// TCP Layer 不负责进行协议数据的切割
+		// TCP Layer 不负责进行协议数据的切割 但这里实现了插帧特性
+		//
+		// 当 lastAck 小于 seq 时 场景类似
+		//
+		// expected:
+		//   packet1 -> packet2 -> packet3 -> packet4
+		//
+		// actually:
+		//   packet1 -> packet3 -> packet4
+		//                ^
+		//                | missing packet2
+		//
+		// 理论上按照 TCP 协议 缺失的包会在重传后到达 但由于解析程序的流式特性 并不会感知到这个包
+		// 因此这里 `假装` 补录了一个 TCP 包 大多数协议都需要靠确定的长度来辨识请求
+		// 如果仅需过计数长度的话 插帧算法有概率会提高请求的准确性（在不关注具体 body 内容的前提下）
+		// TODO(mando): 是否使用特性开关决定其行为？
+		delta := seq - s.lastAck
+		if s.lastAck > 0 && delta <= socket.MaxIPPacketSize {
+			s.cw.Write(make([]byte, delta), decodeFunc)
+		}
 	}
 
 	s.cw.Write(payload, decodeFunc)
-	s.lastAck = n // 更新 lastack 代表字节流`已经`收到的最后一个序号
+	s.lastAck = n // 更新 lastAck 代表字节流`已经`收到的最后一个序号
 	return nil
 }

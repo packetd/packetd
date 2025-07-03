@@ -18,7 +18,7 @@ controller:
 #      - "destination.host"
 #      - "destination.port"
 
-sniffer.ifaces: 'any'
+sniffer.ifaces: 'lo'
 sniffer.engine: pcap
 sniffer.ipv4Only: false
 #sniffer.file: "/tmp/apm-worker.pcap"
@@ -91,9 +91,9 @@ processor:
 #    config:
 
 pipeline:
-  - name: "traces/common"
-    processors:
-      - roundtripstotraces
+#  - name: "traces/common"
+#    processors:
+#      - roundtripstotraces
 
   - name: "metrics/common"
     processors:

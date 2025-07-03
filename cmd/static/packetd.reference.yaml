@@ -46,6 +46,12 @@ sniffer.ipv4Only: false
 # noPromiscuous 是否关闭 promiscuous 模式
 sniffer.noPromiscuous: false
 
+# Default: 16
+# blockNum 缓冲区 block 数量（仅 Linux 生效）
+# 实际代表着生成的 buffer 区域空间为 (1/2 * blockNum) MB 即默认 bufferSize 为 8MB
+# 该数值仅能设置为 16 的倍数 非法数值将重置为默认值
+sniffer.blockNum: 16
+
 # Default: None
 # protocols.rules 声明解析协议以及端口 使用列表允许同时指定多个协议
 #  - name: 规则名称

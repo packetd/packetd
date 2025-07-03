@@ -104,8 +104,6 @@ func (e *Exporter) Close() {
 	if e.conf.RoundTrips.Enabled {
 		e.roundTripsSinker.Close()
 	}
-
-	e.metricsStorage.Close()
 }
 
 func (e *Exporter) Export(record *common.Record) {
