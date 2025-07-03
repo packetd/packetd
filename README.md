@@ -87,7 +87,7 @@ packetd 遵循了 Prometheus 以及 OpenTelemetry 社区的 Metrics / Traces 设
 
 可通过配置文件的开关选择是否打开数据的上报功能，对于指标提供了 /metrics 接口以及 remotewrite 两种形式。
 
-**Grafana + Prometheus**
+**Prometheus + Grafana**
 
 ![grafana](./docs/images/grafana.png)
 
@@ -97,9 +97,9 @@ packetd 遵循了 Prometheus 以及 OpenTelemetry 社区的 Metrics / Traces 设
 
 详细内容参见 [#Observability](./docs/observability.md)。
 
-**ELK Stack**
+**Elasticsearch + Kibana**
 
-![elk](./docs/images/kibana.png)
+![kibana](./docs/images/kibana.png)
 
 ## 🏅 Benchmark
 
