@@ -28,7 +28,8 @@ import (
 type Unit uint8
 
 const (
-	UnitBytes Unit = iota
+	UnitNone Unit = iota
+	UnitBytes
 	UnitSeconds
 )
 
@@ -60,8 +61,9 @@ func DefBuckets(u Unit) []float64 {
 		return DefSizeDistribution
 	case UnitSeconds:
 		return DefObserveDuration
+	default:
+		return nil
 	}
-	return nil
 }
 
 type Model uint8
@@ -78,6 +80,25 @@ type ConstMetric struct {
 	Name   string
 	Labels labels.Labels
 	Value  float64
+}
+
+func NewCounterConstMetric(name string, val float64, lbs labels.Labels) ConstMetric {
+	return ConstMetric{
+		Model:  ModelCounter,
+		Name:   name,
+		Labels: lbs,
+		Value:  val,
+	}
+}
+
+func NewHistogramConstMetric(name string, val float64, unit Unit, lbs labels.Labels) ConstMetric {
+	return ConstMetric{
+		Model:  ModelHistogram,
+		Name:   name,
+		Labels: lbs,
+		Value:  val,
+		Unit:   unit,
+	}
 }
 
 type Set struct {
@@ -97,16 +118,6 @@ func newSet(expired time.Duration) *Set {
 		vmHistograms: make(map[string]*VmHistogram),
 		gauges:       make(map[string]*Gauge),
 	}
-}
-
-func (s *Set) Reset() {
-	s.mut.Lock()
-	defer s.mut.Unlock()
-
-	s.counters = make(map[string]*Counter)
-	s.histograms = make(map[string]*Histogram)
-	s.vmHistograms = make(map[string]*VmHistogram)
-	s.gauges = make(map[string]*Gauge)
 }
 
 func (s *Set) GetOrCreateCounter(name string) *Counter {

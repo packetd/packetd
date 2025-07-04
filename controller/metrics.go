@@ -21,13 +21,30 @@ import (
 )
 
 var (
+	uptime = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Namespace: common.App,
+			Name:      "uptime",
+			Help:      "Uptime in seconds",
+		},
+	)
+
+	buildInfo = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: common.App,
+			Name:      "build_info",
+			Help:      "Build information",
+		},
+		[]string{"version", "git_hash", "build_time"},
+	)
+
 	snifferReceivedPackets = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: common.App,
 			Name:      "sniffer_received_packets_total",
 			Help:      "Sniffer received packets total",
 		},
-		[]string{"name"},
+		[]string{"iface"},
 	)
 
 	snifferDroppedPackets = promauto.NewGaugeVec(
@@ -36,6 +53,14 @@ var (
 			Name:      "sniffer_dropped_packets_total",
 			Help:      "Sniffer dropped packets total",
 		},
-		[]string{"name"},
+		[]string{"iface"},
+	)
+
+	handledRoundtrips = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: common.App,
+			Name:      "handled_roundtrips_total",
+			Help:      "Handled roundtrips total",
+		},
 	)
 )

@@ -69,7 +69,6 @@ func (s *Storage) sendOut(data []ptrace.Span) {
 	resources := resourceSpans.Resource().Attributes()
 	resources.PutStr("service.name", common.App)
 	resources.PutStr("telemetry.sdk.name", common.App)
-	resources.PutStr("telemetry.sdk.version", common.Version)
 	resources.PutStr("telemetry.sdk.language", "golang")
 
 	spans := resourceSpans.ScopeSpans().AppendEmpty().Spans()

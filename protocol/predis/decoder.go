@@ -353,9 +353,6 @@ func (d *decoder) decodeBulkStrings(r *splitio.Reader) (bool, error) {
 	for {
 		line, eof := r.ReadLine()
 		if eof {
-			if bytes.Equal(r.Last(), splitio.CharLF) {
-				return true, nil
-			}
 			d.stack.push(reg) // 请求还没结束 那就进入下一轮
 			return false, io.ErrShortBuffer
 		}

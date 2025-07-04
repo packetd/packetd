@@ -75,6 +75,8 @@ func (s *tcpStream) IsClosed() bool {
 func (s *tcpStream) Stats() Stats {
 	stats := s.stats
 	s.stats = Stats{}
+
+	stats.Proto = socket.L4ProtoTCP
 	return stats
 }
 
@@ -86,7 +88,7 @@ func (s *tcpStream) Write(pkt socket.L4Packet, decodeFunc DecodeFunc) error {
 	if s.closed.Load() {
 		return ErrClosed
 	}
-	s.stats.Packets++
+	s.stats.ReceivedPackets++
 
 	// FIN Flag 标志链接已经终止
 	if seg.FIN {
@@ -107,7 +109,7 @@ func (s *tcpStream) Write(pkt socket.L4Packet, decodeFunc DecodeFunc) error {
 
 	seq := uint64(seg.Seq)
 	n := seq + uint64(len(seg.Payload))
-	s.stats.Bytes += uint64(len(seg.Payload))
+	s.stats.ReceivedBytes += uint64(len(seg.Payload))
 
 	// seq 已经超过了 uint32 上限 将会重头计数
 	if n >= uint64(math.MaxUint32) {
@@ -120,6 +122,7 @@ func (s *tcpStream) Write(pkt socket.L4Packet, decodeFunc DecodeFunc) error {
 	// 收到了更早之前的数据包 不做处理
 	// 可能是因为重传 或者是数据包阻塞在了某个网络节点上
 	if s.lastAck >= n {
+		s.stats.SkippedPackets++
 		return nil
 	}
 
@@ -145,9 +148,11 @@ func (s *tcpStream) Write(pkt socket.L4Packet, decodeFunc DecodeFunc) error {
 		// 理论上按照 TCP 协议 缺失的包会在重传后到达 但由于解析程序的流式特性 并不会感知到这个包
 		// 因此这里 `假装` 补录了一个 TCP 包 大多数协议都需要靠确定的长度来辨识请求
 		// 如果仅需过计数长度的话 插帧算法有概率会提高请求的准确性（在不关注具体 body 内容的前提下）
-		// TODO(mando): 是否使用特性开关决定其行为？
+		//
+		// 理论上这个特性不会使情况变得更糟糕（吧）
 		delta := seq - s.lastAck
 		if s.lastAck > 0 && delta <= socket.MaxIPPacketSize {
+			s.stats.InsertedPackets++
 			s.cw.Write(make([]byte, delta), decodeFunc)
 		}
 	}

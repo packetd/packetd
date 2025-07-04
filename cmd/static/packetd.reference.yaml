@@ -56,7 +56,7 @@ sniffer.blockNum: 16
 # protocols.rules 声明解析协议以及端口 使用列表允许同时指定多个协议
 #  - name: 规则名称
 #  - protocol: 协议名称
-#  - port: 端口号
+#  - ports: 端口号列表
 sniffer.protocols:
   rules:
 #    - name: "redis"

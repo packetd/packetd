@@ -104,10 +104,6 @@ func (s *Storage) WriteRequest() *prompb.WriteRequest {
 	return s.set.WriteRequest()
 }
 
-func (s *Storage) Reset() {
-	s.set.Reset()
-}
-
 func (s *Storage) Close() {
 	close(s.done)
 }

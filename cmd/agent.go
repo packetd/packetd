@@ -20,6 +20,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/confengine"
 	"github.com/packetd/packetd/controller"
 	"github.com/packetd/packetd/internal/sigs"
@@ -36,7 +37,11 @@ var agentCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		ctr, err := controller.New(cfg)
+		ctr, err := controller.New(cfg, common.BuildInfo{
+			Version: version,
+			GitHash: gitHash,
+			Time:    buildTime,
+		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to create controller: %v\n"+
 				"Note: This operation may requires root privileges (try running with 'sudo')", err)

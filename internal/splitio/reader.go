@@ -47,10 +47,3 @@ func (lr *Reader) ReadLine() ([]byte, bool) {
 func (lr *Reader) EOF() bool {
 	return lr.r >= lr.w
 }
-
-func (lr *Reader) Last() []byte {
-	if len(lr.b) <= 0 {
-		return nil
-	}
-	return []byte{lr.b[len(lr.b)-1]}
-}

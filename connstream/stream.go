@@ -43,8 +43,11 @@ var (
 
 // Stats Layer4 的统计数据
 type Stats struct {
-	Packets uint64
-	Bytes   uint64
+	Proto           socket.L4Proto
+	ReceivedPackets uint64
+	ReceivedBytes   uint64
+	SkippedPackets  uint64
+	InsertedPackets uint64
 }
 
 // DecodeFunc 字节流的解析方法

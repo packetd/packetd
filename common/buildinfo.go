@@ -13,14 +13,9 @@
 
 package common
 
-const (
-	// App 应用程序名称
-	App = "packetd"
-
-	// ReadWriteBlockSize 默认的 ringbuffer 的长度
-	//
-	// TCP Segments 的最大长度为 64K (65535 bytes)
-	// 但如果对于每条链接的双向 Stream 都创建这么一大块空间会造成过多的开销
-	// 所以可以设置一个`折中的` buffersize 但这就会要求对 Segment Payload 进行切割
-	ReadWriteBlockSize = 4096
-)
+// BuildInfo 代表程序构建信息
+type BuildInfo struct {
+	Version string
+	GitHash string
+	Time    string
+}

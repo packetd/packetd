@@ -65,32 +65,9 @@ type commonMetrics struct {
 
 func generateCommonMetrics(cm commonMetrics, lbs labels.Labels, secs float64, reqSize, rspSize int) []metricstorage.ConstMetric {
 	return []metricstorage.ConstMetric{
-		{
-			Name:   cm.requestTotal,
-			Model:  metricstorage.ModelCounter,
-			Labels: lbs,
-			Value:  1,
-		},
-		{
-			Name:   cm.requestDurationSeconds,
-			Model:  metricstorage.ModelHistogram,
-			Labels: lbs,
-			Unit:   metricstorage.UnitSeconds,
-			Value:  secs,
-		},
-		{
-			Name:   cm.requestBodySizeBytes,
-			Model:  metricstorage.ModelHistogram,
-			Labels: lbs,
-			Unit:   metricstorage.UnitBytes,
-			Value:  float64(reqSize),
-		},
-		{
-			Name:   cm.responseBodySizeBytes,
-			Model:  metricstorage.ModelHistogram,
-			Labels: lbs,
-			Unit:   metricstorage.UnitBytes,
-			Value:  float64(rspSize),
-		},
+		metricstorage.NewCounterConstMetric(cm.requestTotal, 1, lbs),
+		metricstorage.NewHistogramConstMetric(cm.requestDurationSeconds, secs, metricstorage.UnitSeconds, lbs),
+		metricstorage.NewHistogramConstMetric(cm.requestBodySizeBytes, float64(reqSize), metricstorage.UnitBytes, lbs),
+		metricstorage.NewHistogramConstMetric(cm.responseBodySizeBytes, float64(rspSize), metricstorage.UnitBytes, lbs),
 	}
 }

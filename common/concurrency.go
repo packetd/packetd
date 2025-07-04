@@ -13,10 +13,24 @@
 
 package common
 
-import "runtime"
+import (
+	"runtime"
+	"time"
+)
 
 var coreNums = runtime.NumCPU()
 
 func Concurrency() int {
 	return coreNums * 2
+}
+
+var started int64
+
+func init() {
+	started = time.Now().Unix()
+}
+
+// Started 返回进程启动时间戳
+func Started() int64 {
+	return started
 }

@@ -15,8 +15,10 @@ package controller
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -45,9 +47,10 @@ type Config struct {
 }
 
 type Controller struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	cfg    Config
+	ctx       context.Context
+	cancel    context.CancelFunc
+	cfg       Config
+	buildInfo common.BuildInfo
 
 	pl   *pipeline.Pipeline
 	exp  *exporter.Exporter
@@ -82,7 +85,7 @@ func setupLogger(conf *confengine.Config) error {
 	return nil
 }
 
-func New(conf *confengine.Config) (*Controller, error) {
+func New(conf *confengine.Config, buildInfo common.BuildInfo) (*Controller, error) {
 	if err := setupLogger(conf); err != nil {
 		return nil, err
 	}
@@ -127,6 +130,7 @@ func New(conf *confengine.Config) (*Controller, error) {
 		ctx:        ctx,
 		cancel:     cancel,
 		cfg:        cfg,
+		buildInfo:  buildInfo,
 		pl:         pl,
 		snif:       snif,
 		pps:        pps,
@@ -145,7 +149,12 @@ func (c *Controller) Start() error {
 	}
 
 	if c.svr != nil {
-		go c.svr.ListenAndServe()
+		go func() {
+			err := c.svr.ListenAndServe()
+			if !errors.Is(err, io.EOF) {
+				logger.Errorf("failed to start server: %v", err)
+			}
+		}()
 	}
 
 	c.exp.Start()
@@ -169,6 +178,8 @@ func (c *Controller) Start() error {
 }
 
 func (c *Controller) recordMetrics() {
+	uptime.Set(float64(time.Now().Unix() - common.Started()))
+	buildInfo.WithLabelValues(c.buildInfo.Version, c.buildInfo.GitHash, c.buildInfo.Time).Inc()
 	for _, s := range c.snif.Stats() {
 		snifferReceivedPackets.WithLabelValues(s.Name).Set(float64(s.Packets))
 		snifferDroppedPackets.WithLabelValues(s.Name).Set(float64(s.Drops))
@@ -196,12 +207,6 @@ func (c *Controller) setupServer() {
 	})
 
 	// Admin Routes
-	c.svr.RegisterPostRoute("/-/protocol/reset", func(w http.ResponseWriter, r *http.Request) {
-		if c.storage == nil {
-			return
-		}
-		c.storage.Reset()
-	})
 	c.svr.RegisterPostRoute("/-/logger", func(w http.ResponseWriter, r *http.Request) {
 		level := r.FormValue("level")
 		logger.SetLoggerLevel(level)
@@ -235,20 +240,22 @@ func (c *Controller) updatePoolPromMetrics(stats connstream.TupleStats) {
 		}
 	}
 
-	c.storage.Update(
-		metricstorage.ConstMetric{
-			Model:  metricstorage.ModelCounter,
-			Name:   "layer4_packets_total",
-			Labels: lbs,
-			Value:  float64(stats.Stats.Packets),
-		},
-		metricstorage.ConstMetric{
-			Model:  metricstorage.ModelCounter,
-			Name:   "layer4_bytes_total",
-			Labels: lbs,
-			Value:  float64(stats.Stats.Bytes),
-		},
-	)
+	ss := stats.Stats
+	switch ss.Proto {
+	case socket.L4ProtoTCP:
+		c.storage.Update(
+			metricstorage.NewCounterConstMetric("tcp_received_packets_total", float64(ss.ReceivedPackets), lbs),
+			metricstorage.NewCounterConstMetric("tcp_received_bytes_total", float64(ss.ReceivedBytes), lbs),
+			metricstorage.NewCounterConstMetric("tcp_skipped_packets_total", float64(ss.SkippedPackets), lbs),
+			metricstorage.NewCounterConstMetric("tcp_inserted_packets_total", float64(ss.InsertedPackets), lbs),
+		)
+
+	case socket.L4ProtoUDP:
+		c.storage.Update(
+			metricstorage.NewCounterConstMetric("udp_received_packets_total", float64(ss.ReceivedPackets), lbs),
+			metricstorage.NewCounterConstMetric("udp_received_bytes_total", float64(ss.ReceivedBytes), lbs),
+		)
+	}
 }
 
 // Reload 重载配置
@@ -276,6 +283,7 @@ func (c *Controller) consumeRoundTrip() {
 	for {
 		select {
 		case rt := <-c.roundtrips:
+			handledRoundtrips.Inc()
 			record := common.NewRecord(common.RecordRoundTrips, rt)
 			c.exp.Export(record)
 			c.pl.Range(record, func(dst *common.Record) {

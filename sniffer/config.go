@@ -23,13 +23,31 @@ import (
 )
 
 type Config struct {
-	File          string    `config:"file"`
-	Ifaces        string    `config:"ifaces"`
-	Engine        string    `config:"engine"`
-	IPv4Only      bool      `config:"ipv4Only"`
-	Protocols     Protocols `config:"protocols"`
-	NoPromiscuous bool      `config:"noPromiscuous"`
-	BlockNum      int       `config:"blockNum"`
+	// File 指定是否从文件中加载网络包 与监听网卡选项互斥
+	File string `config:"file"`
+
+	// Ifaces 指定监听的网卡 与 tcpdump 的 -i 参数一致
+	Ifaces string `config:"ifaces"`
+
+	// Engine 指定监听引擎 目前仅支持 pcap
+	Engine string `config:"engine"`
+
+	// IPv4Only 是否只监听 ipv4 地址的网卡
+	IPv4Only bool `config:"ipv4Only"`
+
+	// Protocols 声明解析协议以及端口 使用列表允许同时指定多个协议
+	// - name: 规则名称
+	// - protocol: 协议名称
+	// - ports: 端口号列表
+	Protocols Protocols `config:"protocols"`
+
+	// NoPromiscuous 是否关闭 promiscuous 模式
+	NoPromiscuous bool `config:"noPromiscuous"`
+
+	// BlockNum 缓冲区 block 数量（仅 Linux 生效）
+	// 实际代表着生成的 buffer 区域空间为 (1/2 * blockNum) MB 即默认 bufferSize 为 8MB
+	// 该数值仅能设置为 16 的倍数 非法数值将重置为默认值
+	BlockNum int `config:"blockNum"`
 }
 
 type ProtoRule struct {
@@ -87,23 +105,25 @@ func (ps Protocols) CompileBPFFilter() (string, error) {
 			return "", errors.Errorf("unsupported protocol (%s)", p.Protocol)
 		}
 
-		s := p.compileBPFFilter(string(l4))
-		if strings.TrimSpace(s) == "" {
+		filter := p.compileBPFFilter(string(l4))
+		if strings.TrimSpace(filter) == "" {
 			continue
 		}
-		filters = append(filters, s)
+		filters = append(filters, filter)
 	}
 
-	bpfFilter := strings.Join(filters, " or ")
-	return bpfFilter, nil
+	if len(filters) == 0 {
+		return "", nil
+	}
+	return strings.Join(filters, " or "), nil
 }
 
 // L7Ports 将协议规则转换为端口列表
 func (ps Protocols) L7Ports() []socket.L7Ports {
-	toPorts := func(lst []uint16) []socket.Port {
-		dst := make([]socket.Port, 0, len(lst))
-		for i := 0; i < len(lst); i++ {
-			dst = append(dst, socket.Port(lst[i]))
+	toPorts := func(ports []uint16) []socket.Port {
+		dst := make([]socket.Port, 0, len(ports))
+		for i := 0; i < len(ports); i++ {
+			dst = append(dst, socket.Port(ports[i]))
 		}
 		return dst
 	}

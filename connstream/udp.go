@@ -61,6 +61,8 @@ func (s *udpStream) IsClosed() bool {
 func (s *udpStream) Stats() Stats {
 	stats := s.stats
 	s.stats = Stats{}
+
+	stats.Proto = socket.L4ProtoUDP
 	return stats
 }
 
@@ -70,14 +72,14 @@ func (s *udpStream) Stats() Stats {
 func (s *udpStream) Write(pkt socket.L4Packet, decodeFunc DecodeFunc) error {
 	seg := pkt.(*socket.UDPDatagram)
 	s.activeAt = time.Now()
-	s.stats.Packets++
+	s.stats.ReceivedPackets++
 
 	// 无数据内容不处理
 	if len(seg.Payload) == 0 {
 		return ErrClosed
 	}
 
-	s.stats.Bytes += uint64(len(seg.Payload))
+	s.stats.ReceivedBytes += uint64(len(seg.Payload))
 	payload := seg.Payload
 	s.cw.Write(payload, decodeFunc)
 	return ErrClosed

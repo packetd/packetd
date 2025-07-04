@@ -11,16 +11,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
+package cmd
 
-const (
-	// App 应用程序名称
-	App = "packetd"
+import (
+	"fmt"
 
-	// ReadWriteBlockSize 默认的 ringbuffer 的长度
-	//
-	// TCP Segments 的最大长度为 64K (65535 bytes)
-	// 但如果对于每条链接的双向 Stream 都创建这么一大块空间会造成过多的开销
-	// 所以可以设置一个`折中的` buffersize 但这就会要求对 Segment Payload 进行切割
-	ReadWriteBlockSize = 4096
+	"github.com/spf13/cobra"
 )
+
+var (
+	version   = "unknown.version"
+	gitHash   = "unknown.gitHash"
+	buildTime = "unknown.buildTime"
+)
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Display version information",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Version:", version)
+		fmt.Println("GitHash:", gitHash)
+		fmt.Println("BuildTime:", buildTime)
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(versionCmd)
+}
