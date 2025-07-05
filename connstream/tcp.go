@@ -16,7 +16,6 @@ package connstream
 import (
 	"math"
 	"sync/atomic"
-	"time"
 
 	"github.com/packetd/packetd/common/socket"
 )
@@ -43,12 +42,11 @@ import (
 */
 
 type tcpStream struct {
-	st       socket.Tuple // 使用 st 作为 Stream 的唯一标识
-	lastAck  uint64       // 虚拟的数据流最后一次 ack 序号
-	cw       *chunkWriter // chunk 分批写入
-	closed   atomic.Bool  // 链接是否结束态标识
-	activeAt time.Time    // 链接最后处理数据的时间
-	stats    Stats
+	st      socket.Tuple // 使用 st 作为 Stream 的唯一标识
+	lastAck uint64       // 虚拟的数据流最后一次 ack 序号
+	cw      *chunkWriter // chunk 分批写入
+	closed  atomic.Bool  // 链接是否结束态标识
+	stats   Stats
 }
 
 // NewTCPStream 根据 socket.Tuple 创建 TCPStream 实例
@@ -62,10 +60,6 @@ func NewTCPStream(st socket.Tuple) Stream {
 
 func (s *tcpStream) SocketTuple() socket.Tuple {
 	return s.st
-}
-
-func (s *tcpStream) ActiveAt() time.Time {
-	return s.activeAt
 }
 
 func (s *tcpStream) IsClosed() bool {
@@ -82,7 +76,6 @@ func (s *tcpStream) Stats() Stats {
 
 func (s *tcpStream) Write(pkt socket.L4Packet, decodeFunc DecodeFunc) error {
 	seg := pkt.(*socket.TCPSegment)
-	s.activeAt = time.Now()
 
 	// 已经关闭的数据流不允许再写入
 	if s.closed.Load() {
@@ -147,7 +140,7 @@ func (s *tcpStream) Write(pkt socket.L4Packet, decodeFunc DecodeFunc) error {
 		//
 		// 理论上按照 TCP 协议 缺失的包会在重传后到达 但由于解析程序的流式特性 并不会感知到这个包
 		// 因此这里 `假装` 补录了一个 TCP 包 大多数协议都需要靠确定的长度来辨识请求
-		// 如果仅需过计数长度的话 插帧算法有概率会提高请求的准确性（在不关注具体 body 内容的前提下）
+		// 如果仅需计数长度的话 插帧算法有概率会提高请求的准确性（在不关注具体 body 内容的前提下）
 		//
 		// 理论上这个特性不会使情况变得更糟糕（吧）
 		delta := seq - s.lastAck

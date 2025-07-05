@@ -14,6 +14,8 @@
 package controller
 
 import (
+	"time"
+
 	"github.com/hashicorp/go-multierror"
 
 	"github.com/packetd/packetd/common/socket"
@@ -118,5 +120,11 @@ func (pps *portPools) RangePoolStats(f func(stats connstream.TupleStats)) {
 		pool.OnStats(func(stats connstream.TupleStats) {
 			f(stats)
 		})
+	}
+}
+
+func (pps *portPools) RemoveExpired(duration time.Duration) {
+	for _, pool := range pps.pools {
+		pool.RemoveExpired(duration)
 	}
 }

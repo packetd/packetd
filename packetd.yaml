@@ -21,18 +21,18 @@ controller:
 sniffer.ifaces: 'lo'
 sniffer.engine: pcap
 sniffer.ipv4Only: false
-sniffer.blockNum: 256
+sniffer.blockNum: 16
 #sniffer.file: "/tmp/apm-worker.pcap"
 
 sniffer.protocols:
   rules:
-    - name: "redis"
-      protocol: "redis"
-      ports: [6379]
-
-#    - name: "http"
-#      protocol: "http"
-#      ports: [8083]
+#    - name: "redis"
+#      protocol: "redis"
+#      ports: [6379]
+#
+    - name: "http"
+      protocol: "http"
+      ports: [8083]
 
 #    - name: "mysql"
 #      protocol: "mysql"

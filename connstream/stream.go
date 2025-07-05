@@ -21,6 +21,7 @@ import (
 
 	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/common/socket"
+	"github.com/packetd/packetd/internal/fasttime"
 	"github.com/packetd/packetd/internal/splitio"
 	"github.com/packetd/packetd/internal/zerocopy"
 )
@@ -68,11 +69,6 @@ type DecodeFunc func(r zerocopy.Reader)
 type Stream interface {
 	// SocketTuple 返回 Stream socket.Tuple 标识
 	SocketTuple() socket.Tuple
-
-	// ActiveAt 返回链接最后活跃时间
-	//
-	// 每次 decode 前会先记录
-	ActiveAt() time.Time
 
 	// IsClosed 返回 Stream 是否已经处于结束态
 	//
@@ -162,8 +158,9 @@ func (p *pipe) isClosed() bool {
 //
 // l, r 记录这条 Conn 仅能通过两个 socket.Tuple
 type Conn struct {
-	pipe *pipe
-	l, r socket.Tuple
+	pipe     *pipe
+	l, r     socket.Tuple
+	activeAt int64 // unix timestamp
 }
 
 // NewConn 创建 Layer4 Connection
@@ -221,12 +218,20 @@ func (c *Conn) Write(seg socket.L4Packet, decodeFunc DecodeFunc) error {
 	}
 
 	// 写入并解码数据
+	c.activeAt = fasttime.UnixTimestamp()
 	return stream.Write(seg, decodeFunc)
 }
 
 // IsClosed 返回 Conn 是否已经处于结束态
 func (c *Conn) IsClosed() bool {
 	return c.pipe.isClosed()
+}
+
+// ActiveAt 返回链接最后活跃时间
+//
+// 每次 decode 前会先记录
+func (c *Conn) ActiveAt() time.Time {
+	return time.Unix(c.activeAt, 0)
 }
 
 // chunkWriter 负责将 Reader 数据切成若干 chunk 并写入 Stream

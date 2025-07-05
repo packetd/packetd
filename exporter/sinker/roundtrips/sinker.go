@@ -14,7 +14,6 @@
 package roundtrips
 
 import (
-	"encoding/json"
 	"io"
 	"os"
 
@@ -23,6 +22,7 @@ import (
 	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/common/socket"
 	"github.com/packetd/packetd/exporter"
+	"github.com/packetd/packetd/internal/json"
 )
 
 func init() {
@@ -31,7 +31,7 @@ func init() {
 
 type Sinker struct {
 	wr      io.WriteCloser
-	encoder *json.Encoder
+	encoder json.Encoder
 	cfg     *exporter.RoundTripsConfig
 }
 

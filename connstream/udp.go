@@ -14,8 +14,6 @@
 package connstream
 
 import (
-	"time"
-
 	"github.com/packetd/packetd/common/socket"
 )
 
@@ -31,10 +29,9 @@ import (
 */
 
 type udpStream struct {
-	st       socket.Tuple // 使用 st 作为 Stream 的唯一标识
-	cw       *chunkWriter // chunk 分批写入
-	activeAt time.Time    // 链接最后处理数据的时间
-	stats    Stats
+	st    socket.Tuple // 使用 st 作为 Stream 的唯一标识
+	cw    *chunkWriter // chunk 分批写入
+	stats Stats
 }
 
 // NewUDPStream 根据 socket.Tuple 创建 UDPStream 实例
@@ -48,10 +45,6 @@ func NewUDPStream(st socket.Tuple) Stream {
 
 func (s *udpStream) SocketTuple() socket.Tuple {
 	return s.st
-}
-
-func (s *udpStream) ActiveAt() time.Time {
-	return s.activeAt
 }
 
 func (s *udpStream) IsClosed() bool {
@@ -71,7 +64,6 @@ func (s *udpStream) Stats() Stats {
 // UDP 数据包每次写入均返回链接关闭 不用等待
 func (s *udpStream) Write(pkt socket.L4Packet, decodeFunc DecodeFunc) error {
 	seg := pkt.(*socket.UDPDatagram)
-	s.activeAt = time.Now()
 	s.stats.ReceivedPackets++
 
 	// 无数据内容不处理

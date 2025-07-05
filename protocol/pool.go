@@ -15,6 +15,7 @@ package protocol
 
 import (
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -58,6 +59,9 @@ type Conn interface {
 
 	// IsClosed 返回链接是否关闭
 	IsClosed() bool
+
+	// ActiveAt 返回链接最后活跃时间
+	ActiveAt() time.Time
 }
 
 // CreateConnFunc 根据传入的 socket.Tuple 创建对应协议的 Conn
@@ -80,6 +84,9 @@ type ConnPool interface {
 
 	// Clean 释放链接资源
 	Clean()
+
+	// RemoveExpired 清理超过 duration 未收到任何数据包的 Conn
+	RemoveExpired(duration time.Duration)
 }
 
 // connPool 实现了通用的链接管理池 负责链接的创建和释放
@@ -172,6 +179,7 @@ func (cp *connPool) GetOrCreate(st socket.Tuple, serverPort socket.Port) Conn {
 	return conn
 }
 
+// OnStats 触发 Stats 统计事件
 func (cp *connPool) OnStats(f func(connstream.TupleStats)) {
 	cp.mut.RLock()
 	defer cp.mut.RUnlock()
@@ -184,7 +192,7 @@ func (cp *connPool) OnStats(f func(connstream.TupleStats)) {
 	}
 }
 
-// Clean 清理资源
+// Clean 清理资源 调用后请勿再次使用
 func (cp *connPool) Clean() {
 	if cp.frozen != nil {
 		cp.frozen.Close()
@@ -193,6 +201,25 @@ func (cp *connPool) Clean() {
 	for st, conn := range cp.conns {
 		conn.Free()
 		delete(cp.conns, st)
+	}
+}
+
+// ActiveConns 返回活跃的 Connection 数量
+func (cp *connPool) ActiveConns() int {
+	return len(cp.conns)
+}
+
+// RemoveExpired 清理超过 duration 时间未有任何活跃数据包的 Conn
+func (cp *connPool) RemoveExpired(duration time.Duration) {
+	cp.mut.Lock()
+	defer cp.mut.Unlock()
+
+	now := time.Now()
+	for st, conn := range cp.conns {
+		if conn.ActiveAt().Add(duration).Before(now) {
+			conn.Free()
+			delete(cp.conns, st)
+		}
 	}
 }
 
@@ -303,6 +330,10 @@ func (c *L7TCPConn) Free() {
 			c.r.d.Free()
 		}
 	})
+}
+
+func (c *L7TCPConn) ActiveAt() time.Time {
+	return c.conn.ActiveAt()
 }
 
 func (c *L7TCPConn) Stats() []connstream.TupleStats {

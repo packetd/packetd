@@ -6,6 +6,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/dgrr/http2 v0.3.5
 	github.com/elastic/go-ucfg v0.8.8
+	github.com/goccy/go-json v0.10.5
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/snappy v1.0.0
 	github.com/gopacket/gopacket v1.3.1

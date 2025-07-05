@@ -40,10 +40,21 @@ import (
 )
 
 type Config struct {
+	// Layer4Metrics 四层指标统计
 	Layer4Metrics struct {
 		Enabled        bool     `config:"enabled"`
 		RequiredLabels []string `config:"requiredLabels"`
 	} `config:"layer4Metrics"`
+
+	// ConnExpired 未活跃链接过期时间
+	ConnExpired time.Duration `config:"connExpired"`
+}
+
+func (c Config) GetConnExpired() time.Duration {
+	if c.ConnExpired < time.Minute {
+		return 5 * time.Minute
+	}
+	return c.ConnExpired
 }
 
 type Controller struct {
@@ -147,6 +158,7 @@ func (c *Controller) Start() error {
 	for i := 0; i < common.Concurrency(); i++ {
 		go wait.Until(c.ctx, c.consumeRoundTrip)
 	}
+	go c.removeExpiredConn()
 
 	if c.svr != nil {
 		go func() {
@@ -172,7 +184,6 @@ func (c *Controller) Start() error {
 		if err == nil {
 			return
 		}
-		// TODO(mando): 考虑异常断开或者没有 fin 包的情况也需要清理
 		if errors.Is(err, protocol.ErrConnClosed) {
 			pool.Delete(pkt.SocketTuple())
 			return
@@ -181,6 +192,21 @@ func (c *Controller) Start() error {
 	})
 
 	return nil
+}
+
+func (c *Controller) removeExpiredConn() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			c.pps.RemoveExpired(c.cfg.GetConnExpired())
+
+		case <-c.ctx.Done():
+			return
+		}
+	}
 }
 
 func (c *Controller) recordMetrics() {
