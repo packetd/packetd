@@ -21,7 +21,7 @@ controller:
 sniffer.ifaces: 'lo'
 sniffer.engine: pcap
 sniffer.ipv4Only: false
-sniffer.blockNum: 128
+sniffer.blockNum: 256
 #sniffer.file: "/tmp/apm-worker.pcap"
 
 sniffer.protocols:

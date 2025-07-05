@@ -167,11 +167,17 @@ func (c *Controller) Start() error {
 		if conn == nil {
 			return
 		}
+
 		err := conn.OnL4Packet(pkt, c.roundtrips)
+		if err == nil {
+			return
+		}
 		// TODO(mando): 考虑异常断开或者没有 fin 包的情况也需要清理
 		if errors.Is(err, protocol.ErrConnClosed) {
 			pool.Delete(pkt.SocketTuple())
+			return
 		}
+		logger.Debugf("failed to handle %s packet: %v", pkt.SocketTuple(), err)
 	})
 
 	return nil
