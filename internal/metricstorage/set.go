@@ -91,6 +91,15 @@ func NewCounterConstMetric(name string, val float64, lbs labels.Labels) ConstMet
 	}
 }
 
+func NewGaugeConstMetric(name string, val float64, lbs labels.Labels) ConstMetric {
+	return ConstMetric{
+		Model:  ModelGauge,
+		Name:   name,
+		Labels: lbs,
+		Value:  val,
+	}
+}
+
 func NewHistogramConstMetric(name string, val float64, unit Unit, lbs labels.Labels) ConstMetric {
 	return ConstMetric{
 		Model:  ModelHistogram,

@@ -71,6 +71,9 @@ type CreateConnFunc func(st socket.Tuple, serverPort socket.Port) Conn
 //
 // Pool 应该具备删除和创建链接的能力 同时执行 Clean 时应该释放链接持有的任何资源
 type ConnPool interface {
+	// L4Proto 返回链接 Layer Protocol 类型
+	L4Proto() socket.L4Proto
+
 	// Delete 删除一个链接
 	Delete(st socket.Tuple)
 
@@ -82,11 +85,14 @@ type ConnPool interface {
 	// 读取即重置 counter 需要重新计数
 	OnStats(f func(connstream.TupleStats))
 
-	// Clean 释放链接资源
-	Clean()
+	// ActiveConns 返回活跃的 Connection 数量
+	ActiveConns() int
 
 	// RemoveExpired 清理超过 duration 未收到任何数据包的 Conn
 	RemoveExpired(duration time.Duration)
+
+	// Clean 释放链接资源
+	Clean()
 }
 
 // connPool 实现了通用的链接管理池 负责链接的创建和释放
@@ -117,18 +123,24 @@ type ConnPool interface {
 //
 // 因此需要一个 frozen 机制 不同协议可能有不同的周期 frozen 为空则代表无需此机制
 type connPool struct {
+	l4Proto    socket.L4Proto
 	createConn CreateConnFunc
 	mut        sync.RWMutex
 	conns      map[socket.Tuple]Conn
 	frozen     *socket.TTLCache
 }
 
+func (cp *connPool) L4Proto() socket.L4Proto {
+	return cp.l4Proto
+}
+
 // NewConnPool 创建并返回一个连接池
 //
 // createConn 由具体的应用层协议定制并传入
 // 对于 socket 和 socket.Mirror 的操作要保证原子性
-func NewConnPool(createConn CreateConnFunc, ttl *socket.TTLCache) ConnPool {
+func NewConnPool(l4Proto socket.L4Proto, createConn CreateConnFunc, ttl *socket.TTLCache) ConnPool {
 	return &connPool{
+		l4Proto:    l4Proto,
 		createConn: createConn,
 		conns:      make(map[socket.Tuple]Conn),
 		frozen:     ttl,
@@ -249,6 +261,7 @@ type (
 // 默认注册 2*MSL 的 TTL 缓存
 func NewL7TCPConnPool(createMatcher CreateMatcherFunc, createRoundTrip CreateRoundTripFunc, createDecoder CreateDecoderFunc) ConnPool {
 	return NewConnPool(
+		socket.L4ProtoTCP,
 		func(st socket.Tuple, serverPort socket.Port) Conn {
 			matcher := createMatcher()
 			return NewL7Conn(
@@ -268,6 +281,7 @@ func NewL7TCPConnPool(createMatcher CreateMatcherFunc, createRoundTrip CreateRou
 // 无需提供 TLL 缓存
 func NewL7UDPConnPool(createMatcher CreateMatcherFunc, createRoundTrip CreateRoundTripFunc, createDecoder CreateDecoderFunc) ConnPool {
 	return NewConnPool(
+		socket.L4ProtoUDP,
 		func(st socket.Tuple, serverPort socket.Port) Conn {
 			matcher := createMatcher()
 			return NewL7Conn(

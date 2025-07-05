@@ -55,7 +55,7 @@ func (g *Gauge) Set(v float64, lbs labels.Labels) {
 	if !ok {
 		g.gauges[hash] = &gauge{lbs: lbs}
 	}
-	g.gauges[hash].val += v
+	g.gauges[hash].val = v
 	g.gauges[hash].updated = fasttime.UnixTimestamp()
 }
 

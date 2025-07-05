@@ -112,6 +112,11 @@ controller.layer4Metrics:
     - "destination.host"
     - "destination.port"
 
+# Default: 5m
+# 未活跃链接清理时间 超过该时间不再收到数据包将被清理
+# 最小值为 1m
+controller.connExpired: 5m
+
 
 # ========== metricsStorage configuration ==========
 #

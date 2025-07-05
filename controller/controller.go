@@ -233,8 +233,9 @@ func (c *Controller) setupServer() {
 			return
 		}
 		c.pps.RangePoolStats(func(stats connstream.TupleStats) {
-			c.updatePoolPromMetrics(stats)
+			c.updatePoolStats(stats)
 		})
+		c.updateActivePoolConns(c.pps.ActivePoolConns())
 		c.storage.WritePrometheus(w)
 	})
 
@@ -253,7 +254,7 @@ func (c *Controller) setupServer() {
 	})
 }
 
-func (c *Controller) updatePoolPromMetrics(stats connstream.TupleStats) {
+func (c *Controller) updatePoolStats(stats connstream.TupleStats) {
 	if !c.cfg.Layer4Metrics.Enabled {
 		return
 	}
@@ -287,6 +288,12 @@ func (c *Controller) updatePoolPromMetrics(stats connstream.TupleStats) {
 			metricstorage.NewCounterConstMetric("udp_received_packets_total", float64(ss.ReceivedPackets), lbs),
 			metricstorage.NewCounterConstMetric("udp_received_bytes_total", float64(ss.ReceivedBytes), lbs),
 		)
+	}
+}
+
+func (c *Controller) updateActivePoolConns(count map[socket.L4Proto]int) {
+	for k, v := range count {
+		c.storage.Update(metricstorage.NewGaugeConstMetric(string(k)+"_active_conns", float64(v), nil))
 	}
 }
 
