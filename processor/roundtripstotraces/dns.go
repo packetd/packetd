@@ -21,6 +21,8 @@ import (
 	"github.com/packetd/packetd/protocol/pdns"
 )
 
+// https://opentelemetry.io/docs/specs/semconv/dns/dns-metrics/
+
 func init() {
 	register(socket.L7ProtoDNS, newDNSConverter())
 }

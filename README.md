@@ -1,26 +1,26 @@
-# packetd
+<p align="center">
+	<img src="./docs/images/packetd.png" height="180px"/>
+</p>
 
-> packetd 是一个基于 `ebpf` 的**应用层协议**网络数据无侵观测项目。
+<p align="center">
+    <em>🚀 packetd 是一个基于 `ebpf` 的高性能无侵入网络观测项目</em>
+</p>
 
-packetd 支持从数据流中解析出多种应用协议（HTTP/Grpc/MySQL/Redis/...），使用请求的来回 **RoundTrip** 作为其核心概念，进而衍生出 **Traces/Metrics** 数据。
+## 💡 Overview
 
-但由于缺乏上下文关联，Traces 仅能代表当次网络情况的情况，无法关联应用层的 Span，更像是一种 Event/Log 类型的数据，只不过以 Traces 的形式组织起来。
+[tcpdump](https://www.tcpdump.org/) 是一款强大的网络抓包工具，可以结合 [wireshark](https://www.wireshark.org/) 工具对流量进行分析。但是 tcpdump 缺少了一些现代化观测方案联动的手段，比如生成 traces/metrics/logs。另外 tcpdump 更倾向于作为一种 cli 工具，而不是以 agent 模式持续运行。
+
+**So, packetd is born.**
+
+packetd 支持从数据流中解析出多种应用协议（HTTP/gRPC/MySQL/Redis/Kafka/...），使用请求的来回 **roundtrip** 作为其核心概念，进而衍生出 traces/metrics/roundtrips 数据。
+
+由于缺乏上下文关联，traces 仅能代表当次网络情况的情况，无法关联应用层的 span，更像是一种 event/log 类型的数据，只不过以 traces 的形式组织起来。
 
 packetd 提供了更加现代化的可观测手段，可以无缝地对接现有的观测体系：
 
-- 支持 Prometheus RemoteWrite 协议上报 Metrics 数据。
-- 支持 VictoriaMetrics VmRange Histogram，无需提前定义 bucket。
-- 支持 OpenTelemetry 协议上报 Traces 数据。
-
-整体架构图如下：
-
-![arch.png](./docs/images/arch.png)
-
-- 引擎层：负责加载和处理配置数据。
-- 监听层：使用 `libpcap` 监听网卡设备或直接加载 `pcap.file` 读取网络数据包，并交由解析层进行协议解析。
-- 解析层：负责多种协议的网络包数据解析，并生成 roundtrip。
-- 处理层：流式清洗 roundtrip 处理多种协议的 roundtrip 数据（生成 metrics/traces 等）。
-- 上报层：将数据上报到不同的存储后端，或者本地文件输出。
+- 支持 Prometheus /metrics 路由暴露指标。
+- 支持 Prometheus RemoteWrite 协议主动上报 Metrics 数据（如 VictoriaMetrics）。
+- 支持 OpenTelemetry 协议上报 traces 数据。
 
 ## 🔰 Installation
 
@@ -42,33 +42,35 @@ $ sudo yum install libpcap libpcap-devel
 
 Windows 系统需要先安装 [npcap](https://nmap.org/npcap/)。
 
+使用 `go install` 安装二进制文件。
+
 ```shell
 $ go install github.com/packetd/packetd@latest
 ```
 
+使用源码构建。
+
+```shell
+$ git clone https://github.com/packetd/packetd.git
+$ make build
+# $ mv packetd /usr/local/bin
+```
+
 ## 🚀 Quickstart
 
-packetd 支支持 `log` 和 `agent` 两种运行模式。
+packetd 支持 `watch` 和 `agent` 两种运行模式。
 
-**log mode**
+***watch mode***
 
-![log-mode](./docs/images/log-mode.png)
+![watch-mode](./docs/images/watch-mode.png)
 
-**agent mode*
+***agent mode***
 
 ![agent-mode](./docs/images/agent-mode.png)
 
-详细内容参见 [#Quickstart](./docs/quickstart.md)。
+## 🗂 Protocol
 
-## 📝 Configuration
-
-建议使用 `packetd config > packetd.yaml` 命令可生成样例文件，并按需进行调整，样例文件已对各项配置进行了详细说明。
-
-详细配置参见 [#Config Reference](./cmd/static/packetd.reference.yaml)。
-
-## 💡 Protocol
-
-支持的协议列表，参见 [#Protocol](./protocol)
+packetd 支持的应用层协议列表。
 
 - amqp
 - dns
@@ -83,29 +85,34 @@ packetd 支支持 `log` 和 `agent` 两种运行模式。
 
 ## 🔍 Observability
 
-packetd 遵循了 Prometheus 以及 OpenTelemetry 社区的 Metrics / Traces 设计。
+packetd 遵循了 Prometheus 以及 OpenTelemetry 社区的 metrics/traces 设计规范。
 
-可通过配置文件的开关选择是否打开数据的上报功能，对于指标提供了 /metrics 接口以及 remotewrite 两种形式。
+可通过配置文件的开关选择是否打开数据的上报功能：
+
+* metrics 提供了 /metrics 接口以及 remotewrite 两种形式。
+* traces 提供了 OT HTTP exporter 上报方案。
+* roundtrips 可以搭配 ELK 方案进行持久化和检索。
 
 **Prometheus + Grafana**
 
-![grafana](./docs/images/grafana.png)
+![grafana-prometheus](./docs/images/grafana1.png)
 
 **OpenTelemetry + Jaeger**
 
 ![jaeger](./docs/images/jaeger.png)
 
-详细内容参见 [#Observability](./docs/observability.md)。
-
 **Elasticsearch + Kibana**
 
 ![kibana](./docs/images/kibana.png)
 
-## 🏅 Benchmark
+## 📍 Links
 
-packetd 支持的每种协议都进行了压测，并输出了相应的压测报告。
-
-详细内容参见 [#Benchamark](./docs/benchmark.md)。
+* [快速上手](./docs/quickstart.md)
+* [架构设计](./docs/design.md)
+* [配置选项](./cmd/static/packetd.reference.yaml)
+* [可观测数据](./docs/observability.md)
+* [API](./docs/api.md)
+* [性能压测](./docs/performance.md)
 
 ## 🤔 FQA
 
@@ -113,18 +120,26 @@ packetd 支持的每种协议都进行了压测，并输出了相应的压测报
 
 **不能。**
 
-packetd 是**完全流式**的解析，这也是 packetd 有较好性能的原因（性能优化细节可参考 [benchmark](./docs/benchmark.md)）。
+packetd 是**完全流式**的解析，这也是 packetd 有着良好性能的原因。
 
-- 缓存数据包会占用大量的内存，packetd 是面对海量网络流量而设计的。作为 agent 如果要缓存所有数据流的 TCP 包，那么这个开销几乎是不可接受的。
-- 会大幅增加代码的复杂度，数据包重组是内核的 TCP 栈实现的，相当于要在应用层实现一套同样的逻辑，且 packetd 进程是不持有 FD 的，缺乏一些关键的上下文信息，实现难度大。
+- packetd 是面对海量网络流量而设计的，性能是第一原则，缓存数据包会带来大量的计算资源开销。
+- 数据包重组是内核的 TCP 栈实现的，应用层的 packetd 进程不持有 FD，且缺乏一些关键的上下文信息，实现难度大。
 
-packetd 使用 `libpcap` 监听了网卡，因此在网络较差的环境中，丢包率可能会上升，协议解析 **Roundtrip** 的达成率会**明显下降**。此时 Layer4 的指标会体现为重复 ack 序号的数据包明显上升。
+packetd 使用网卡监方案，因此在网络较差的环境或者在面临海量数据包的时候，应用层会出现丢包现象，调大 buffer 区**一定程度上缓解**丢包情况带来的准确率下降问题。
+
+***# Q: 是否能解析 TLS 链接？***
+
+**不能。**
+
+TLS 数据包的解析需要握手的相关证书信息，从数据包本身是无法推断其内容的，因此 packetd 仅面向**未加密的链接数据流**。
+
+理论上可以使用 `uprobe` 在程序即将写入内核前，即还没对数据包进行加密前进行插桩，那这样就得为**不同的语言不同的版本实现不同的插桩逻辑**，且不保证一定能实现，收益较低。 
 
 ***# Q: 为什么选择了 libpcap 而不是更现代的 XDP/TC 等方案？***
 
 **兼容性考量**
 
-libpcap 几乎支持了所有的主流 Linux 发行版（Linux2.2+），不存在兼容性问题，而像 XDP/TC 有较高的内核版本要求。
+libpcap 支持了几乎所有的主流 Linux 发行版（Linux2.2+），有着良好兼容性，而像 XDP/TC 有较高的内核版本要求。
 
 以下表格来自 [pktstat-bpf](https://github.com/dkorunic/pktstat-bpf/blob/main/README.md) 项目文档。
 
@@ -141,18 +156,19 @@ libpcap 几乎支持了所有的主流 Linux 发行版（Linux2.2+），不存�
 | XDP Native                                          | Yes     | **No** | **Very high**  | No               | v5.9            | No                |
 | XDP Offloaded                                       | Yes     | **No** | **Wire speed** | No               | v5.9            | **Yes**           |
 
-packetd 也尝试过 XDP 的方案，但性能对于 `AF_PACKET` **没有量级上的提升**，最终在 Linux 上还是仅保留了 `AF_PACKE` 方案。
+packetd 也尝试过 XDP 的方案，但性能对比 `AF_PACKET` **没有量级上的提升**，最终在 Linux 上还是仅保留了 `AF_PACKE` 方案。
 
-对于非 Linux 系统（Windows/Darwin/..），`PCAP` 方案均能支持。综合评估下来，`libpcap` 是一个可接受的方案。
+对于非 Linux 系统（Windows/Darwin/..）`PCAP` 方案也均能支持。综合评估下来，`libpcap` 是一个可接受的方案。
 
-*Note: packetd 可能需要特权模式运行，如果报错可尝试使用 sysadmin 权限运行。*
+**BPF-Filter 支持**
 
-## 🗂 Roadmap
+libpcap 提供了一套 [filter](https://www.tcpdump.org/manpages/pcap-filter.7.html) 语法，可以灵活地对数据包在内核态进行筛选过滤，避免多余的数据包复制开销。
 
-- 支持 stats 模式
-- 内置 web 可视化方案
-- kubernetes 部署支持
-- 更多的协议支持
+如果使用其他方案就得重新实现一套类似的语法以减少数据拷贝开销。
+
+***# Q: 为什么无法发现任何网卡？***
+
+packetd 可能需要特权模式运行，如果报错可尝试使用 sysadmin 权限运行，如 `root` / `Administrator`。
 
 ## 🔖 License
 

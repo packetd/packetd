@@ -21,6 +21,8 @@ import (
 	"github.com/packetd/packetd/protocol/pmongodb"
 )
 
+// https://opentelemetry.io/docs/specs/semconv/database/mongodb/
+
 func init() {
 	register(socket.L7ProtoMongoDB, newMongoDBConverter())
 }

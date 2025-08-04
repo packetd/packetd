@@ -66,7 +66,7 @@ type decoder struct {
 	msg        *Message
 }
 
-func NewDecoder(st socket.Tuple, _ socket.Port) protocol.Decoder {
+func NewDecoder(st socket.Tuple, _ socket.Port, _ common.Options) protocol.Decoder {
 	return &decoder{
 		st:  st.ToRaw(),
 		msg: &Message{},

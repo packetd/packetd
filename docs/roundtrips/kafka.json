@@ -1,0 +1,28 @@
+{
+  "Request": {
+    "CorrelationID": 3,
+    "Host": "::1",
+    "Port": 59210,
+    "Proto": "Kafka",
+    "Size": 36,
+    "Time": "2025-07-11T11:45:05.607655866-04:00",
+    "Packet": {
+      "API": "Metadata",
+      "APIVersion": 7,
+      "CorrelationID": 3,
+      "ClientID": "sarama",
+      "GroupID": "",
+      "Topic": "benchmark"
+    }
+  },
+  "Response": {
+    "CorrelationID": 3,
+    "Host": "::1",
+    "Port": 9092,
+    "Proto": "Kafka",
+    "Size": 121,
+    "Time": "2025-07-11T11:45:05.609596762-04:00",
+    "ErrorCode": "NoError"
+  },
+  "Duration": "1.940896ms"
+}

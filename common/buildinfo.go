@@ -19,3 +19,17 @@ type BuildInfo struct {
 	GitHash string
 	Time    string
 }
+
+var (
+	buildVersion string
+	buildTime    string
+	buildHash    string
+)
+
+func GetBuildInfo() BuildInfo {
+	return BuildInfo{
+		Version: buildVersion,
+		GitHash: buildHash,
+		Time:    buildTime,
+	}
+}

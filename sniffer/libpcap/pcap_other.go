@@ -85,7 +85,7 @@ func New(conf *sniffer.Config) (sniffer.Sniffer, error) {
 // TODO(mando): 非 linux 系统不支持 'any' 网卡 即启动时就已经决定了使用的设备
 // 后续不再更新 因此这里需要有一个 watch/poll 机制来保证新增的设备能被处理
 func (ps *pcapSniffer) makeHandlers() error {
-	ifaces, err := filterInterfaces(ps.conf.Ifaces, ps.conf.IPv4Only)
+	ifaces, err := filterInterfaces(ps.conf.Ifaces)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func (ps *pcapSniffer) makeHandlers() error {
 }
 
 func (ps *pcapSniffer) getHandle(device, bpfFilter string) (*pcap.Handle, error) {
-	handle, err := pcap.OpenLive(device, socket.MaxIPPacketSize, !ps.conf.NoPromiscuous, pcap.BlockForever)
+	handle, err := pcap.OpenLive(device, socket.MaxIPV6PacketSize, !ps.conf.NoPromisc, pcap.BlockForever)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (ps *pcapSniffer) getHandle(device, bpfFilter string) (*pcap.Handle, error)
 }
 
 func (ps *pcapSniffer) parsePacket(packet gopacket.Packet) {
-	payload, lyr, next, err := sniffer.DecodeIPLayer(packet.Data(), ps.conf.IPv4Only)
+	payload, lyr, next, err := sniffer.DecodeIPLayer(packet.Data(), sniffer.IPVPicker(ps.conf.IPVersion))
 	if err != nil {
 		return
 	}
@@ -236,7 +236,7 @@ func (ps *pcapSniffer) Close() {
 // filterInterfaces 过滤指定网卡
 //
 // 同一块网卡可能同时包含多个 IP 地址 v4/v6 所以这里只做初步筛选 允许筛除只含 ipv6 地址的网卡
-func filterInterfaces(pattern string, hasIPv4 bool) ([]net.Interface, error) {
+func filterInterfaces(pattern string) ([]net.Interface, error) {
 	var all bool
 	if pattern == "" || pattern == "any" {
 		all = true // 代表监听所有网卡
@@ -254,9 +254,6 @@ func filterInterfaces(pattern string, hasIPv4 bool) ([]net.Interface, error) {
 	}
 	for _, iface := range ifaces {
 		if r.MatchString(iface.Name) || all {
-			if hasIPv4 && !hasIPv4Addr(iface) {
-				continue
-			}
 			addrs, err := iface.Addrs()
 			if err != nil || len(addrs) == 0 {
 				continue

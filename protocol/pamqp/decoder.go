@@ -95,7 +95,7 @@ type decoder struct {
 	partial uint8  // 标记上一轮的 header 是否待拼接
 }
 
-func NewDecoder(st socket.Tuple, serverPort socket.Port) protocol.Decoder {
+func NewDecoder(st socket.Tuple, serverPort socket.Port, _ common.Options) protocol.Decoder {
 	return &decoder{
 		st:         st.ToRaw(),
 		serverPort: serverPort,

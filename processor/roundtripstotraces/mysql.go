@@ -21,6 +21,8 @@ import (
 	"github.com/packetd/packetd/protocol/pmysql"
 )
 
+// https://opentelemetry.io/docs/specs/semconv/database/mysql/
+
 func init() {
 	register(socket.L7ProtoMySQL, newMySQLConverter())
 }

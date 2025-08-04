@@ -82,7 +82,7 @@ func (ps *pcapSniffer) Name() string {
 }
 
 func (ps *pcapSniffer) makeHandlers() error {
-	ifaces, err := filterInterfaces(ps.conf.Ifaces, ps.conf.IPv4Only)
+	ifaces, err := filterInterfaces(ps.conf.Ifaces)
 	if err != nil {
 		return err
 	}
@@ -142,6 +142,11 @@ func verifyBlockNum(n, def int) int {
 	if n%def != 0 {
 		return def
 	}
+
+	const maxBlockSize = 1024
+	if n > maxBlockSize {
+		return maxBlockSize
+	}
 	return n
 }
 
@@ -156,7 +161,7 @@ func (ps *pcapSniffer) getTpacket(device string) (*afpacket.TPacket, error) {
 }
 
 func (ps *pcapSniffer) setBPFFilter(tp *afpacket.TPacket, filter string) error {
-	pcapBPF, err := pcap.CompileBPFFilter(layers.LinkTypeEthernet, defaultCaptureLength, filter)
+	pcapBPF, err := pcap.CompileBPFFilter(layers.LinkTypeEthernet, socket.MaxIPV6PacketSize, filter)
 	if err != nil {
 		return err
 	}
@@ -173,7 +178,7 @@ func (ps *pcapSniffer) setBPFFilter(tp *afpacket.TPacket, filter string) error {
 }
 
 func (ps *pcapSniffer) parsePacket(pkt []byte, ts time.Time) {
-	payload, lyr, next, err := sniffer.DecodeIPLayer(pkt, ps.conf.IPv4Only)
+	payload, lyr, next, err := sniffer.DecodeIPLayer(pkt, sniffer.IPVPicker(ps.conf.IPVersion))
 	if err != nil || lyr == nil {
 		return
 	}
@@ -225,6 +230,7 @@ func (ps *pcapSniffer) listenAfPacket(ph *handler) {
 	for {
 		select {
 		case <-ps.ctx.Done():
+			logger.Infof("pcap handle (%s) closed", ph.name)
 			return
 
 		default:
@@ -297,9 +303,7 @@ func (ps *pcapSniffer) Close() {
 }
 
 // filterInterfaces 过滤指定网卡
-//
-// 同一块网卡可能同时包含多个 IP 地址 v4/v6 所以这里只做初步筛选 允许筛除只含 ipv6 地址的网卡
-func filterInterfaces(pattern string, hasIPv4 bool) ([]net.Interface, error) {
+func filterInterfaces(pattern string) ([]net.Interface, error) {
 	if pattern == "any" {
 		return []net.Interface{{Name: "any"}}, nil
 	}
@@ -319,9 +323,6 @@ func filterInterfaces(pattern string, hasIPv4 bool) ([]net.Interface, error) {
 	}
 	for _, iface := range ifaces {
 		if r.MatchString(iface.Name) {
-			if hasIPv4 && !hasIPv4Addr(iface) {
-				continue
-			}
 			addrs, err := iface.Addrs()
 			if err != nil || len(addrs) == 0 {
 				continue

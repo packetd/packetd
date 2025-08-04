@@ -21,6 +21,8 @@ import (
 	"github.com/packetd/packetd/protocol/ppostgresql"
 )
 
+// https://opentelemetry.io/docs/specs/semconv/database/postgresql/
+
 func init() {
 	register(socket.L7ProtoPostgreSQL, newPostgreSQLConverter())
 }

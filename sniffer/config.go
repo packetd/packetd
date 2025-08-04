@@ -32,8 +32,11 @@ type Config struct {
 	// Engine 指定监听引擎 目前仅支持 pcap
 	Engine string `config:"engine"`
 
-	// IPv4Only 是否只监听 ipv4 地址的网卡
-	IPv4Only bool `config:"ipv4Only"`
+	// IPVersion 指定监听 ipv4/ipv6 可选值为
+	// - v4
+	// - v6
+	// 空值或其他非法值均代表同时监听两者
+	IPVersion string `config:"ipVersion"`
 
 	// Protocols 声明解析协议以及端口 使用列表允许同时指定多个协议
 	// - name: 规则名称
@@ -41,13 +44,29 @@ type Config struct {
 	// - ports: 端口号列表
 	Protocols Protocols `config:"protocols"`
 
-	// NoPromiscuous 是否关闭 promiscuous 模式
-	NoPromiscuous bool `config:"noPromiscuous"`
+	// NoPromisc 是否关闭 promiscuous 模式
+	NoPromisc bool `config:"noPromisc"`
 
 	// BlockNum 缓冲区 block 数量（仅 Linux 生效）
 	// 实际代表着生成的 buffer 区域空间为 (1/2 * blockNum) MB 即默认 bufferSize 为 8MB
 	// 该数值仅能设置为 16 的倍数 非法数值将重置为默认值
 	BlockNum int `config:"blockNum"`
+}
+
+type IPVPicker string
+
+func (ipv IPVPicker) IPV4() bool {
+	if ipv == "" || ipv == "v4" {
+		return true
+	}
+	return false
+}
+
+func (ipv IPVPicker) IPV6() bool {
+	if ipv == "" || ipv == "v6" {
+		return true
+	}
+	return false
 }
 
 type ProtoRule struct {

@@ -153,7 +153,7 @@ func BenchmarkBufioReader(b *testing.B) {
 	})
 }
 
-func BenchmarkReader(b *testing.B) {
+func BenchmarkZeroCopyReader(b *testing.B) {
 	var input []byte
 	input = append(input, bytes.Repeat([]byte(strings.Repeat("x", 1024)+"\n"), 100)...)
 

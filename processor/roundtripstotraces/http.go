@@ -23,6 +23,8 @@ import (
 	"github.com/packetd/packetd/protocol/phttp"
 )
 
+// https://opentelemetry.io/docs/specs/semconv/http/http-spans/
+
 func init() {
 	register(socket.L7ProtoHTTP, newHTTPConverter())
 }

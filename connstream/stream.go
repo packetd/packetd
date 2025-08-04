@@ -14,15 +14,12 @@
 package connstream
 
 import (
-	"bytes"
 	"time"
 
 	"github.com/pkg/errors"
 
-	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/common/socket"
 	"github.com/packetd/packetd/internal/fasttime"
-	"github.com/packetd/packetd/internal/splitio"
 	"github.com/packetd/packetd/internal/zerocopy"
 )
 
@@ -48,7 +45,6 @@ type Stats struct {
 	ReceivedPackets uint64
 	ReceivedBytes   uint64
 	SkippedPackets  uint64
-	InsertedPackets uint64
 }
 
 // DecodeFunc 字节流的解析方法
@@ -232,61 +228,4 @@ func (c *Conn) IsClosed() bool {
 // 每次 decode 前会先记录
 func (c *Conn) ActiveAt() time.Time {
 	return time.Unix(c.activeAt, 0)
-}
-
-// chunkWriter 负责将 Reader 数据切成若干 chunk 并写入 Stream
-//
-// 每次写入均要调用 DecodeFunc 进行数据解析
-type chunkWriter struct {
-	zb zerocopy.Buffer
-}
-
-func newChunkWriter() *chunkWriter {
-	return &chunkWriter{
-		zb: zerocopy.NewBuffer(nil),
-	}
-}
-
-// writeChunk 分批写入 rb 并执行 DecodeFunc
-//
-// 为了保证 `每一字节` 均要被 Decode 则要求 ReadSize >= WriteSize
-// 切割 chunk 的时候要考虑保证数据的连续性 部分协议会使用 CRLF 作为结尾
-// 所以不要将 CR LR 分批发送
-func (cw *chunkWriter) Write(payload []byte, f DecodeFunc) {
-	const buffered = 64
-	var l, r int
-	size := len(payload)
-	for {
-		r += common.ReadWriteBlockSize - buffered
-		if r >= size {
-			r = size
-			if l == r {
-				return
-			}
-			cw.zb.Write(payload[l:r])
-			if f != nil {
-				f(cw.zb)
-			}
-			return
-		}
-
-		end := r + buffered
-		if end > size {
-			end = size
-		}
-		idx := bytes.IndexByte(payload[r:end], splitio.CharLF[0])
-		if idx >= 0 {
-			r += idx + 1
-		}
-		cw.zb.Write(payload[l:r])
-		if f != nil {
-			f(cw.zb)
-		}
-		l += r - l
-	}
-}
-
-// Close 关闭 Writer 将 buffer 置为 EOF 状态
-func (cw *chunkWriter) Close() {
-	cw.zb.Close()
 }

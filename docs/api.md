@@ -1,6 +1,8 @@
 # API 文档
 
-### 监控指标
+> 本文档描述了 packetd server API。
+
+## 监控路由
 
 * GET /metrics: prometheus 自监控指标上报
 * GET /protocol/metrics: 协议监控指标上报
@@ -14,7 +16,6 @@
     ```
 
 * POST /-/reload: 运行时重载 packetd
-* POST /-/protocol/reset: 清空协议指标
 
 ### 性能分析
 

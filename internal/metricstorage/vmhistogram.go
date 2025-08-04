@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"strconv"
 	"sync"
 	"time"
 
@@ -222,7 +221,7 @@ func (h *VmHistogram) PrompbSeriess() []prompb.TimeSeries {
 			tss := ToPrompbTimeSeries(
 				ConstMetric{
 					Name:   h.name + "_bucket",
-					Labels: append(inst.lbs, labels.Label{Name: "vmrange", Value: strconv.Itoa(int(count))}),
+					Labels: append(inst.lbs, labels.Label{Name: "vmrange", Value: vmrange}),
 					Value:  float64(count),
 				})
 			seriess = append(seriess, tss...)

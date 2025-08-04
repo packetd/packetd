@@ -195,7 +195,7 @@ func parsePacket(ts time.Time, lyrs ...gopacket.Layer) socket.L4Packet {
 // DecodeIPLayer 解析 IP 层
 //
 // 返回数据包 Payload 以及所处 Layer
-func DecodeIPLayer(b []byte, ipv4Only bool) ([]byte, gopacket.Layer, gopacket.LayerType, error) {
+func DecodeIPLayer(b []byte, ipvPicker IPVPicker) ([]byte, gopacket.Layer, gopacket.LayerType, error) {
 	// decode packets followed by layers
 	// 1) Ethernet Layer
 	// 2) IP Layer
@@ -211,6 +211,10 @@ func DecodeIPLayer(b []byte, ipv4Only bool) ([]byte, gopacket.Layer, gopacket.La
 
 	switch ipv {
 	case layerIpv4:
+		if !ipvPicker.IPV4() {
+			return nil, nil, 0, nil
+		}
+
 		var ipLayer layers.IPv4
 		err := ipLayer.DecodeFromBytes(content, gopacket.NilDecodeFeedback)
 		if err != nil {
@@ -222,7 +226,7 @@ func DecodeIPLayer(b []byte, ipv4Only bool) ([]byte, gopacket.Layer, gopacket.La
 		next = ipLayer.NextLayerType()
 
 	case layerIpv6:
-		if ipv4Only {
+		if !ipvPicker.IPV6() {
 			return nil, nil, 0, nil
 		}
 

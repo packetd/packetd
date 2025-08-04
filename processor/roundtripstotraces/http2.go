@@ -23,6 +23,8 @@ import (
 	"github.com/packetd/packetd/protocol/phttp2"
 )
 
+// https://opentelemetry.io/docs/specs/semconv/registry/attributes/http/
+
 func init() {
 	register(socket.L7ProtoHTTP2, newHTTP2Converter())
 }

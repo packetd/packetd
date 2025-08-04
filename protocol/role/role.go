@@ -140,3 +140,64 @@ func (m *ListMatcher) Match(o *Object) *Pair {
 	}
 	return nil
 }
+
+// FuzzyMatcher 模糊匹配器
+//
+// FuzzyMatcher 不关心是 Request / Response 哪个先到 仅保证最大程度完成匹配
+type FuzzyMatcher struct {
+	l         *list.List
+	size      int // 超限驱逐
+	matchFunc func(a, b *Object) bool
+}
+
+func NewFuzzyMatcher(size int, matchFunc func(o1, o2 *Object) bool) Matcher {
+	return &FuzzyMatcher{
+		size:      size,
+		matchFunc: matchFunc,
+		l:         list.New(),
+	}
+}
+
+func (m *FuzzyMatcher) Match(o *Object) *Pair {
+	if m.l.Len() >= m.size {
+		m.l.Remove(m.l.Front())
+	}
+
+	switch o.Role {
+	case Request:
+		for e := m.l.Front(); e != nil; e = e.Next() {
+			if e.Value.(*Object).Role == Request {
+				continue
+			}
+
+			if m.matchFunc(o, e.Value.(*Object)) {
+				pair := &Pair{
+					Request:  o,
+					Response: e.Value.(*Object),
+				}
+				m.l.Remove(e)
+				return pair
+			}
+		}
+		m.l.PushBack(o)
+
+	case Response:
+		for e := m.l.Front(); e != nil; e = e.Next() {
+			if e.Value.(*Object).Role == Response {
+				continue
+			}
+
+			if m.matchFunc(e.Value.(*Object), o) {
+				pair := &Pair{
+					Request:  e.Value.(*Object),
+					Response: o,
+				}
+				m.l.Remove(e)
+				return pair
+			}
+		}
+		m.l.PushBack(o)
+	}
+
+	return nil
+}

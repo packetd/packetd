@@ -1,0 +1,41 @@
+{
+  "Request": {
+    "ChannelID": 1,
+    "Host": "::1",
+    "Port": 39868,
+    "Proto": "AMQP",
+    "Size": 29,
+    "Time": "2025-07-12T02:16:14.104693567-04:00",
+    "Packet": {
+      "ExchangeName": "",
+      "RoutingKey": "",
+      "QueueName": "benchmark"
+    },
+    "ClassMethod": {
+      "Class": "Queue",
+      "Method": "Declare"
+    },
+    "FrameType": "Method",
+    "ErrCode": "OK"
+  },
+  "Response": {
+    "ChannelID": 1,
+    "Host": "::1",
+    "Port": 5672,
+    "Proto": "AMQP",
+    "Size": 30,
+    "Time": "2025-07-12T02:16:14.105375103-04:00",
+    "Packet": {
+      "ExchangeName": "",
+      "RoutingKey": "",
+      "QueueName": "benchmark"
+    },
+    "ClassMethod": {
+      "Class": "Queue",
+      "Method": "Declare-Ok"
+    },
+    "FrameType": "Method",
+    "ErrCode": "OK"
+  },
+  "Duration": "681.536µs"
+}

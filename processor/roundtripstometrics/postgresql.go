@@ -50,13 +50,6 @@ func (c *postgresqlConverter) matchLabels(req *ppostgresql.Request, rsp *ppostgr
 		switch label {
 		case "request.command":
 			lbs = append(lbs, labels.Label{Name: "command", Value: name})
-
-		case "response.packet_type":
-			var packetType string
-			if obj, ok := rsp.Packet.(interface{ Name() string }); ok {
-				packetType = obj.Name()
-			}
-			lbs = append(lbs, labels.Label{Name: "packet_type", Value: packetType})
 		}
 	}
 	return lbs

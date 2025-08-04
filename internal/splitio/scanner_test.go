@@ -132,7 +132,7 @@ type mockScanner interface {
 	Bytes() []byte
 }
 
-func BenchmarkScanner(b *testing.B) {
+func BenchmarkZeroCopyScanner(b *testing.B) {
 	benchmarkScanner(b, func(b []byte) mockScanner {
 		return NewScanner(b)
 	})

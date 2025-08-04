@@ -23,6 +23,8 @@ import (
 	"github.com/packetd/packetd/protocol/pkafka"
 )
 
+// https://opentelemetry.io/docs/specs/semconv/messaging/kafka/
+
 func init() {
 	register(socket.L7ProtoKafka, newKafkaConverter())
 }

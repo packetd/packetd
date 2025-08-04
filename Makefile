@@ -11,16 +11,13 @@ help:
 	@echo " lint: Lint Go code"
 	@echo " test: Run unit tests"
 	@echo " build: Build Go package"
-	@echo " tools: Install dev tools"
-
-.PHONY: license
-license:
-	find ./ -type f \( -iname \*.go -o -iname \*.sh \) | xargs addlicense -v -f LICENSE
+	@echo " install-tools: Install dev tools"
 
 .PHONY: lint
-lint: license
+lint:
 	gofumpt -w .
 	goimports-reviser -project-name "github.com/packetd/packetd" ./...
+	find ./ -type f \( -iname \*.go -o -iname \*.sh \) | xargs addlicense -v -f LICENSE
 
 .PHONY: test
 test:
@@ -31,7 +28,7 @@ mod:
 	$(GO) mod download
 	$(GO) mod tidy
 
-.PHONY: tools
+.PHONY: install-tools
 tools:
 	$(GO) install mvdan.cc/gofumpt@latest
 	$(GO) install github.com/incu6us/goimports-reviser/v3@v3.1.1
@@ -41,7 +38,7 @@ tools:
 build:
 	$(GO) build -ldflags " \
 	-s -w \
-	-X $(PKG)/cmd.version=$(VERSION) \
-	-X $(PKG)/cmd.buildTime=$(shell date -u '+%Y-%m-%d_%I:%M:%S%p') \
-	-X $(PKG)/cmd.gitHash=$(shell git rev-parse HEAD)" \
+	-X $(PKG)/common.buildVersion=$(VERSION) \
+	-X $(PKG)/common.buildTime=$(shell date -u '+%Y-%m-%d_%I:%M:%S%p') \
+	-X $(PKG)/common.buildGitHash=$(shell git rev-parse HEAD)" \
 	-o packetd .

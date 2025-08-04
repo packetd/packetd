@@ -21,22 +21,35 @@ import (
 //go:embed command.list
 var commandContent string
 
-var commands map[string]struct{}
+var (
+	commands                map[string]struct{}
+	commandsWithCollections map[string]struct{}
+)
 
 func init() {
 	commands = make(map[string]struct{})
+	commandsWithCollections = make(map[string]struct{})
 	for _, s := range strings.Split(commandContent, "\n") {
 		if s == "" {
 			continue
 		}
 
-		fields := strings.Fields(s)
-		commands[fields[0]] = struct{}{}
+		// 末尾带分号的表示 cmd value 为 collection name
+		if strings.HasSuffix(s, ";") {
+			s = s[:len(s)-1]
+			commandsWithCollections[s] = struct{}{}
+		}
+		commands[s] = struct{}{}
 	}
 }
 
 func isCommand(s string) bool {
 	_, ok := commands[s]
+	return ok
+}
+
+func isCommandWithCollection(s string) bool {
+	_, ok := commandsWithCollections[s]
 	return ok
 }
 

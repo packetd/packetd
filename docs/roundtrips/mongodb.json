@@ -1,1 +1,28 @@
-package roundtrips
+{
+  "Request": {
+    "ID": 1054,
+    "Host": "::1",
+    "Port": 60580,
+    "Proto": "MongoDB",
+    "OpCode": "MSG",
+    "Source": "benchmark",
+    "Collection": "stress_test",
+    "CmdName": "find",
+    "CmdValue": "stress_test",
+    "Size": 131,
+    "Time": "2025-07-10T12:44:18.687428242-04:00"
+  },
+  "Response": {
+    "ID": 1054,
+    "Host": "::1",
+    "Port": 27017,
+    "Proto": "MongoDB",
+    "OpCode": "MSG",
+    "Ok": 0,
+    "Code": 0,
+    "Message": "OK",
+    "Size": 26111,
+    "Time": "2025-07-10T12:44:18.687626491-04:00"
+  },
+  "Duration": "198.249µs"
+}

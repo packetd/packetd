@@ -1,68 +1,62 @@
 {
   "Request": {
-    "Host": "172.16.22.128",
-    "Port": 45446,
-    "Method": "GET",
+    "Host": "192.168.255.128",
+    "Port": 50824,
+    "Method": "POST",
     "Header": {
       "Accept": [
         "*/*"
       ],
       "User-Agent": [
-        "curl/8.2.1"
+        "curl/8.11.1"
+      ],
+      "X-App-Name": [
+        "packetd"
       ]
     },
     "Proto": "HTTP/1.1",
-    "Path": "/",
-    "URL": "/",
+    "Path": "/post",
+    "URL": "/post",
     "Scheme": "",
-    "RemoteHost": "google.com",
+    "RemoteHost": "httpbin.org",
     "Close": false,
     "Size": 0,
     "Chunked": false,
-    "Time": "2025-06-29T01:51:32.341778618+08:00"
+    "Time": "2025-07-05T13:43:06.142837228-04:00"
   },
   "Response": {
-    "Host": "8.7.198.46",
+    "Host": "54.243.106.191",
     "Port": 80,
     "Header": {
-      "Cache-Control": [
-        "public, max-age=2592000"
+      "Access-Control-Allow-Credentials": [
+        "true"
+      ],
+      "Access-Control-Allow-Origin": [
+        "*"
+      ],
+      "Connection": [
+        "keep-alive"
       ],
       "Content-Length": [
-        "219"
-      ],
-      "Content-Security-Policy-Report-Only": [
-        "object-src 'none';base-uri 'self';script-src 'nonce-94QUfpHFUYNEdrQmxRB42g' 'strict-dynamic' 'report-sample' 'unsafe-eval' 'unsafe-inline' https: http:;report-uri https://csp.withgoogle.com/csp/gws/other-hp"
+        "349"
       ],
       "Content-Type": [
-        "text/html; charset=UTF-8"
+        "application/json"
       ],
       "Date": [
-        "Sat, 28 Jun 2025 17:51:32 GMT"
-      ],
-      "Expires": [
-        "Mon, 28 Jul 2025 17:51:32 GMT"
-      ],
-      "Location": [
-        "http://www.google.com/"
+        "Sat, 05 Jul 2025 17:43:06 GMT"
       ],
       "Server": [
-        "gws"
-      ],
-      "X-Frame-Options": [
-        "SAMEORIGIN"
-      ],
-      "X-Xss-Protection": [
-        "0"
+        "gunicorn/19.9.0"
       ]
     },
-    "Status": "301 Moved Permanently",
-    "StatusCode": 301,
+    "Status": "200 OK",
+    "StatusCode": 200,
     "Proto": "HTTP/1.1",
     "Close": false,
-    "Size": 219,
+    "Size": 349,
     "Chunked": false,
-    "Time": "2025-06-29T01:51:32.50632449+08:00"
+    "Time": "2025-07-05T13:43:06.383376676-04:00"
   },
-  "Duration": "164.545872ms"
+  "Duration": "240.539448ms"
 }

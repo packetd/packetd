@@ -1,0 +1,22 @@
+{
+  "Request": {
+    "Host": "172.17.0.1",
+    "Port": 32872,
+    "Proto": "MySQL",
+    "Command": "QUERY",
+    "Size": 30,
+    "Statement": "select * from stress_test",
+    "Time": "2025-07-06T04:34:28.205447211-04:00"
+  },
+  "Response": {
+    "Host": "172.17.0.4",
+    "Port": 3306,
+    "Proto": "MySQL",
+    "Size": 817169,
+    "Packet": {
+      "Rows": 10000
+    },
+    "Time": "2025-07-06T04:34:28.217812596-04:00"
+  },
+  "Duration": "12.365385ms"
+}

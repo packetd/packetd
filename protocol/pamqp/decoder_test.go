@@ -19,6 +19,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/common/socket"
 	"github.com/packetd/packetd/internal/zerocopy"
 	"github.com/packetd/packetd/protocol/role"
@@ -135,7 +136,7 @@ func TestDecoderDecode(t *testing.T) {
 	t0 := time.Now()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dec := NewDecoder(st, 0)
+			dec := NewDecoder(st, 0, common.NewOptions())
 			defer dec.Free()
 
 			var lst []*role.Object

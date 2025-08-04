@@ -151,8 +151,9 @@ func (cd *channelDecoder) decodePayload(b []byte) (bool, error) {
 	}
 
 	if cd.contentSize > 0 {
-		return cd.readall && cd.contentSize == cd.contentConsumed, err
+		return cd.readall && cd.contentSize <= cd.contentConsumed, err
 	}
+
 	return cd.readall, err
 }
 
@@ -292,6 +293,7 @@ func (cd *channelDecoder) decodeFrameContentHeader(b []byte) error {
 	}
 
 	cd.contentSize = bodySize
+	cd.contentConsumed = 0
 	if cd.cm.ClassID == 0 {
 		cd.cm.ClassID = classID // Header 里只有 ClassID 无 MethodID
 	}

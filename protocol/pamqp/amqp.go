@@ -16,6 +16,7 @@ package pamqp
 import (
 	"time"
 
+	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/common/socket"
 	"github.com/packetd/packetd/protocol"
 	"github.com/packetd/packetd/protocol/role"
@@ -25,13 +26,13 @@ func init() {
 	protocol.Register(socket.L7ProtoAMQP, NewConnPool)
 }
 
-const maxRecordSize = 64
+const maxRecordSize = 128
 
 // NewConnPool 创建 AMQP 协议连接池
-func NewConnPool() protocol.ConnPool {
+func NewConnPool(opts common.Options) protocol.ConnPool {
 	return protocol.NewL7TCPConnPool(
 		func() role.Matcher {
-			return role.NewListMatcher(maxRecordSize, func(req, rsp *role.Object) bool {
+			return role.NewFuzzyMatcher(maxRecordSize, func(req, rsp *role.Object) bool {
 				reqObj := req.Obj.(*Request)
 				rspObj := rsp.Obj.(*Response)
 
@@ -40,6 +41,17 @@ func NewConnPool() protocol.ConnPool {
 					return false
 				}
 
+				// 如果出现身份反转则调转对象
+				// 反转指 Response 先与 Client 到达 比如 Consume 场景 实际上是 Server 不断给 Client 推送请求
+				if reqObj.ClassMethod.IsResponseMethod() {
+					// 避免出现负数时间
+					if reqObj.Time.After(rspObj.Time) {
+						reqObj.Time, rspObj.Time = rspObj.Time, reqObj.Time
+					}
+					reqObj.ClassMethod, rspObj.ClassMethod = rspObj.ClassMethod, reqObj.ClassMethod
+				}
+
+				// 控制协议 ChannelID
 				if reqObj.ChannelID == 0 {
 					v, ok := classMethodPairs[reqObj.ClassMethod.Method]
 					if ok && v != rspObj.ClassMethod.Method {
@@ -56,7 +68,7 @@ func NewConnPool() protocol.ConnPool {
 			}
 		},
 		func(st socket.Tuple, serverPort socket.Port) protocol.Decoder {
-			return NewDecoder(st, serverPort)
+			return NewDecoder(st, serverPort, opts)
 		},
 	)
 }

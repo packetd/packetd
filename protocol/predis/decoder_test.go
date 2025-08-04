@@ -21,6 +21,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/common/socket"
 	"github.com/packetd/packetd/internal/zerocopy"
 	"github.com/packetd/packetd/protocol/role"
@@ -94,7 +95,7 @@ func TestDecodeRequest(t *testing.T) {
 	var t0 time.Time
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDecoder(st, 0)
+			d := NewDecoder(st, 0, common.NewOptions())
 			objs, err := d.Decode(zerocopy.NewBuffer([]byte(tt.input)), t0)
 			assert.NoError(t, err)
 
@@ -303,7 +304,7 @@ func TestDecodeResponse(t *testing.T) {
 	var t0 time.Time
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDecoder(st, 0)
+			d := NewDecoder(st, 0, common.NewOptions())
 			objs, err := d.Decode(zerocopy.NewBuffer([]byte(tt.input)), t0)
 			assert.NoError(t, err)
 
@@ -344,7 +345,7 @@ func TestDecodeFailed(t *testing.T) {
 	var t0 time.Time
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDecoder(st, 0)
+			d := NewDecoder(st, 0, common.NewOptions())
 			got, err := d.Decode(zerocopy.NewBuffer([]byte(tt.input)), t0)
 			if tt.wantErr != nil {
 				assert.True(t, errors.Is(err, tt.wantErr))
@@ -491,7 +492,7 @@ func TestDecodeMultiple(t *testing.T) {
 	var t0 time.Time
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDecoder(st, 0)
+			d := NewDecoder(st, 0, common.NewOptions())
 			var objs []*role.Object
 			var err error
 			for _, input := range tt.inputs {

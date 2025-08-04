@@ -31,7 +31,7 @@ type portPools struct {
 	pools map[socket.L7Proto]protocol.ConnPool
 }
 
-func newPortPools(l7ports []socket.L7Ports) (*portPools, error) {
+func newPortPools(l7ports []socket.L7Ports, decoderConfig DecoderConfig) (*portPools, error) {
 	ports := make(map[socket.Port]socket.L7Proto)
 	pools := make(map[socket.L7Proto]protocol.ConnPool)
 
@@ -43,7 +43,7 @@ func newPortPools(l7ports []socket.L7Ports) (*portPools, error) {
 				if err != nil {
 					return nil, err
 				}
-				pools[pp.Proto] = f()
+				pools[pp.Proto] = f(decoderConfig.Get(string(pp.Proto)))
 			}
 		}
 	}
@@ -54,7 +54,7 @@ func newPortPools(l7ports []socket.L7Ports) (*portPools, error) {
 	}, nil
 }
 
-func (pps *portPools) Reload(l7ports []socket.L7Ports) error {
+func (pps *portPools) Reload(l7ports []socket.L7Ports, decoderConfig DecoderConfig) error {
 	newPorts := make(map[socket.Port]socket.L7Proto)
 	newProto := make(map[socket.L7Proto]struct{})
 
@@ -92,7 +92,7 @@ func (pps *portPools) Reload(l7ports []socket.L7Ports) error {
 			errs = multierror.Append(errs, err)
 			continue
 		}
-		newPools[p] = f()
+		newPools[p] = f(decoderConfig.Get(string(p)))
 	}
 
 	prev := pps.pools

@@ -13,6 +13,8 @@
 
 package pamqp
 
+import "strings"
+
 type classMethod struct {
 	ClassID  uint16
 	MethodID uint16
@@ -23,12 +25,23 @@ type NamedClassMethod struct {
 	Method string
 }
 
+// IsResponseMethod 判断是否为 Response Method
+func (ncm NamedClassMethod) IsResponseMethod() bool {
+	switch ncm.Method {
+	case "Ack", "Nack", "Reject":
+		return true
+	}
+
+	return strings.Contains(ncm.Method, "-")
+}
+
 const (
 	classConnection = 10
 	classChannel    = 20
 	classExchange   = 40
 	classQueue      = 50
 	classBasic      = 60
+	classConfirm    = 85
 	classTx         = 90
 )
 
@@ -38,6 +51,7 @@ var classNames = map[uint16]string{
 	classExchange:   "Exchange",
 	classQueue:      "Queue",
 	classBasic:      "Basic",
+	classConfirm:    "Confirm",
 	classTx:         "Tx",
 }
 
@@ -127,6 +141,11 @@ var classMethods = map[classMethod]string{
 	{ClassID: classBasic, MethodID: 100}: "Recover",
 	{ClassID: classBasic, MethodID: 101}: "Recover-Ok",
 	{ClassID: classBasic, MethodID: 120}: "Nack",
+
+	// ConfirmClass
+	// RabbitMQ 扩展协议
+	{ClassID: classConfirm, MethodID: 10}: "Select",
+	{ClassID: classConfirm, MethodID: 11}: "Select-Ok",
 
 	// TxClass (90)
 	{ClassID: classTx, MethodID: 10}: "Select",

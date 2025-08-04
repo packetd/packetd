@@ -15,22 +15,25 @@ package connstream
 
 import (
 	"github.com/packetd/packetd/common/socket"
+	"github.com/packetd/packetd/internal/zerocopy"
 )
 
 /*
 * UDP Layout
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|          Source Port          |       Destination Port        |
+|          Source Port (2)      |       Destination Port (2)    |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|           Length              |           Checksum            |
+|           Length (2)          |           Checksum (2)        |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                             Data                              |
+|                             Data (var)                       |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
 type udpStream struct {
-	st    socket.Tuple // 使用 st 作为 Stream 的唯一标识
-	cw    *chunkWriter // chunk 分批写入
+	st    socket.Tuple    // 使用 st 作为 Stream 的唯一标识
+	zb    zerocopy.Buffer // chunk 分批写入
 	stats Stats
 }
 
@@ -38,7 +41,7 @@ type udpStream struct {
 func NewUDPStream(st socket.Tuple) Stream {
 	stream := &udpStream{
 		st: st,
-		cw: newChunkWriter(),
+		zb: zerocopy.NewBuffer(nil),
 	}
 	return stream
 }
@@ -73,6 +76,10 @@ func (s *udpStream) Write(pkt socket.L4Packet, decodeFunc DecodeFunc) error {
 
 	s.stats.ReceivedBytes += uint64(len(seg.Payload))
 	payload := seg.Payload
-	s.cw.Write(payload, decodeFunc)
+	s.zb.Write(payload)
+	if decodeFunc != nil {
+		decodeFunc(s.zb)
+	}
+
 	return ErrClosed
 }

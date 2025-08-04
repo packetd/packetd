@@ -23,6 +23,8 @@ import (
 	"github.com/packetd/packetd/protocol/pgrpc"
 )
 
+// https://opentelemetry.io/docs/specs/semconv/rpc/grpc/
+
 func init() {
 	register(socket.L7ProtoGRPC, newGRPCConverter())
 }

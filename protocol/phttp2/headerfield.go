@@ -17,6 +17,8 @@ import (
 	"net/http"
 
 	fasthttp2 "github.com/dgrr/http2"
+
+	"github.com/packetd/packetd/internal/rescue"
 )
 
 // HeaderField Header Field 为 HTTP/2 中的 header 实体
@@ -167,6 +169,8 @@ func NewHeaderFieldDecoder(trailerKeys ...string) *HeaderFieldDecoder {
 func (hfd *HeaderFieldDecoder) Decode(b []byte) *HeaderFields {
 	var err error
 	buf := b
+
+	defer rescue.HandleCrash() // http2.field-decoder 实现有 bug 避免程序崩溃
 
 	headerFields := NewHeaderFields(hfd.trailerKeys...)
 	field := &fasthttp2.HeaderField{}

@@ -16,6 +16,7 @@ package pkafka
 import (
 	"time"
 
+	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/common/socket"
 	"github.com/packetd/packetd/protocol"
 	"github.com/packetd/packetd/protocol/role"
@@ -28,7 +29,7 @@ func init() {
 const maxRecordSize = 64
 
 // NewConnPool 创建 Kafka 协议连接池
-func NewConnPool() protocol.ConnPool {
+func NewConnPool(opts common.Options) protocol.ConnPool {
 	return protocol.NewL7TCPConnPool(
 		func() role.Matcher {
 			return role.NewListMatcher(maxRecordSize, func(req, rsp *role.Object) bool {
@@ -42,7 +43,7 @@ func NewConnPool() protocol.ConnPool {
 			}
 		},
 		func(st socket.Tuple, serverPort socket.Port) protocol.Decoder {
-			return NewDecoder(st, serverPort)
+			return NewDecoder(st, serverPort, opts)
 		},
 	)
 }

@@ -6,7 +6,7 @@ server:
   pprof: true
 
 logger:
-  level: "info"
+  level: "debug"
   stdout: true
 
 controller:
@@ -20,9 +20,13 @@ controller:
 
 sniffer.ifaces: 'lo'
 sniffer.engine: pcap
-sniffer.ipv4Only: false
-sniffer.blockNum: 16
+sniffer.ipVersion: v6
+sniffer.blockNum: 128
 #sniffer.file: "/tmp/apm-worker.pcap"
+
+decoder.protocols:
+  mongodb:
+    enableOkCode: false
 
 sniffer.protocols:
   rules:
@@ -30,16 +34,20 @@ sniffer.protocols:
 #      protocol: "redis"
 #      ports: [6379]
 #
-    - name: "http"
-      protocol: "http"
-      ports: [8083]
+#    - name: "http"
+#      protocol: "http"
+#      ports: [8083]
 
 #    - name: "mysql"
 #      protocol: "mysql"
 #      ports: [3306]
-
+#
 #    - name: "grpc"
 #      protocol: "grpc"
+#      ports: [8085]
+
+#    - name: "http2"
+#      protocol: "http2"
 #      ports: [8085]
 
 #    - name: dns
@@ -49,36 +57,38 @@ sniffer.protocols:
 #    - name: mongodb
 #      protocol: "mongodb"
 #      ports: [27017]
-
+#
 #    - name: "postgresql"
 #      protocol: "postgresql"
 #      ports: [5432]
-
+#
 #    - name: "kafka"
 #      protocol: "kafka"
 #      ports: [9092]
-
-#    - name: amqp
-#      protocol: "amqp"
-#      ports: [5672]
+#
+    - name: amqp
+      protocol: "amqp"
+      ports: [5672]
 
 processor:
   - name: roundtripstometrics
     config:
       http:
         requireLabels:
-          - "server.host"
-          - "server.port"
-          - "request.method"
-          - "request.path"
-          - "response.status_code"
+#          - "server.host"
+#          - "server.port"
+#          - "request.method"
+#          - "request.path"
+#          - "request.remote_host"
+#          - "response.status_code"
 
       redis:
         requireLabels:
 
       kafka:
         requireLabels:
-          - request.api
+#          - request.api
+#          - request.version
 
       amqp:
         requireLabels:
@@ -95,7 +105,7 @@ pipeline:
 #  - name: "traces/common"
 #    processors:
 #      - roundtripstotraces
-
+#
   - name: "metrics/common"
     processors:
       - roundtripstometrics
@@ -108,19 +118,19 @@ metricsStorage:
 exporter:
   traces:
     enabled: false
-    endpoint: http://172.16.22.128:4318/v1/traces
+    endpoint: http://localhost:4318/v1/traces
     batch: 10
     interval: 3s
 
   metrics:
     enabled: false
-    endpoint: http://localhost:4318/prometheus/write
-    interval: 1m
+    endpoint: http://localhost:8428/api/v1/write
+    interval: 15s
 
   roundtrips:
     enabled: false
     console: true
-    filename: "roundtrips.log"
+    filename: "packetd.roundtrips"
     maxSize: 100
     maxBackups: 10
     maxAge: 30

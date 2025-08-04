@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/common/socket"
 	"github.com/packetd/packetd/internal/splitio"
 	"github.com/packetd/packetd/internal/zerocopy"
@@ -378,7 +379,7 @@ Host: options.example.com`)),
 	var t0 time.Time
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDecoder(st, 0)
+			d := NewDecoder(st, 0, common.NewOptions())
 			objs, err := d.Decode(zerocopy.NewBuffer(tt.input), t0)
 			assert.NoError(t, err)
 
@@ -611,7 +612,7 @@ X-Custom: second`)),
 	var t0 time.Time
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDecoder(st, 0)
+			d := NewDecoder(st, 0, common.NewOptions())
 			objs, err := d.Decode(zerocopy.NewBuffer(tt.input), t0)
 			assert.NoError(t, err)
 
@@ -668,7 +669,7 @@ Content-Type: text/plain`)),
 	var t0 time.Time
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDecoder(st, 0)
+			d := NewDecoder(st, 0, common.NewOptions())
 			_, err := d.Decode(zerocopy.NewBuffer(tt.input), t0)
 			assert.Error(t, err)
 		})

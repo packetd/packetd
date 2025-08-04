@@ -1,0 +1,24 @@
+{
+  "Request": {
+    "Host": "::1",
+    "Port": 39674,
+    "Proto": "PostgreSQL",
+    "Size": 83,
+    "Packet": {
+      "Statement": "select * from stress_test limit 1000;"
+    },
+    "Time": "2025-07-08T13:43:31.42182927-04:00"
+  },
+  "Response": {
+    "Host": "::1",
+    "Port": 5432,
+    "Proto": "PostgreSQL",
+    "Size": 81165,
+    "Packet": {
+      "Command": "SELECT",
+      "Rows": 1000
+    },
+    "Time": "2025-07-08T13:43:31.422769152-04:00"
+  },
+  "Duration": "939.882µs"
+}

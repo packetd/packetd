@@ -21,6 +21,8 @@ import (
 	"github.com/packetd/packetd/protocol/pamqp"
 )
 
+// https://opentelemetry.io/docs/specs/semconv/messaging/rabbitmq/
+
 func init() {
 	register(socket.L7ProtoAMQP, newAMQPConverter())
 }

@@ -18,34 +18,37 @@ import (
 	"sync/atomic"
 
 	"github.com/packetd/packetd/common/socket"
+	"github.com/packetd/packetd/internal/zerocopy"
 )
 
 /*
 * TCP Layout
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|          Source Port          |       Destination Port        |
+|          Source Port (2)      |       Destination Port (2)    |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                        Sequence Number                        |
+|                        Sequence Number (4)                   |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                    Acknowledgment Number                      |
+|                    Acknowledgment Number (4)                  |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |  Data |           |U|A|P|R|S|F|                               |
-| Offset| Reserved  |R|C|S|S|Y|I|            Window             |
-|       |           |G|K|H|T|N|N|                               |
+|Offset | Reserved  |R|C|S|S|Y|I|            Window (2)         |
+|  (4)  |   (6)     |G|K|H|T|N|N|                               |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|           Checksum            |         Urgent Pointer        |
+|           Checksum (2)        |         Urgent Pointer (2)    |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                    Options                    |    Padding    |
+|                    Options (var, 0-40)        |    Padding    |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                             Data                              |
+|                             Data (var)                        |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
 type tcpStream struct {
-	st      socket.Tuple // 使用 st 作为 Stream 的唯一标识
-	lastAck uint64       // 虚拟的数据流最后一次 ack 序号
-	cw      *chunkWriter // chunk 分批写入
-	closed  atomic.Bool  // 链接是否结束态标识
+	st      socket.Tuple    // 使用 st 作为 Stream 的唯一标识
+	lastAck uint64          // 虚拟的数据流最后一次 ack 序号
+	zb      zerocopy.Buffer // chunk 分批写入
+	closed  atomic.Bool     // 链接是否结束态标识
 	stats   Stats
 }
 
@@ -53,7 +56,7 @@ type tcpStream struct {
 func NewTCPStream(st socket.Tuple) Stream {
 	stream := &tcpStream{
 		st: st,
-		cw: newChunkWriter(),
+		zb: zerocopy.NewBuffer(nil),
 	}
 	return stream
 }
@@ -89,7 +92,7 @@ func (s *tcpStream) Write(pkt socket.L4Packet, decodeFunc DecodeFunc) error {
 		// 收到 FIN Flag 标识着本次请求的发送端已经没有任何东西可以发送
 		// 因此将 reader 设置为 io.EOF
 		if s.closed.Swap(true) {
-			s.cw.Close()
+			s.zb.Close()
 		}
 		// 如果是收到来自对端的 FIN 信号后 仅代表对端已经 `无数据可以发送`
 		// 但此时本端可能还没有把剩余的数据全部读完 所以处理进程还是需要继续
@@ -126,31 +129,12 @@ func (s *tcpStream) Write(pkt socket.L4Packet, decodeFunc DecodeFunc) error {
 		payload = payload[delta:]
 
 	case s.lastAck < seq:
-		// TCP Layer 不负责进行协议数据的切割 但这里实现了插帧特性
-		//
-		// 当 lastAck 小于 seq 时 场景类似
-		//
-		// expected:
-		//   packet1 -> packet2 -> packet3 -> packet4
-		//
-		// actually:
-		//   packet1 -> packet3 -> packet4
-		//                ^
-		//                | missing packet2
-		//
-		// 理论上按照 TCP 协议 缺失的包会在重传后到达 但由于解析程序的流式特性 并不会感知到这个包
-		// 因此这里 `假装` 补录了一个 TCP 包 大多数协议都需要靠确定的长度来辨识请求
-		// 如果仅需计数长度的话 插帧算法有概率会提高请求的准确性（在不关注具体 body 内容的前提下）
-		//
-		// 理论上这个特性不会使情况变得更糟糕（吧）
-		delta := seq - s.lastAck
-		if s.lastAck > 0 && delta <= socket.MaxIPPacketSize {
-			s.stats.InsertedPackets++
-			s.cw.Write(make([]byte, delta), decodeFunc)
-		}
 	}
 
-	s.cw.Write(payload, decodeFunc)
+	s.zb.Write(payload)
+	if decodeFunc != nil {
+		decodeFunc(s.zb)
+	}
 	s.lastAck = n // 更新 lastAck 代表字节流`已经`收到的最后一个序号
 	return nil
 }

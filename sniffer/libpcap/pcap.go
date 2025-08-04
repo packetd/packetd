@@ -19,8 +19,6 @@ import (
 
 	"github.com/gopacket/gopacket/pcap"
 	"github.com/pkg/errors"
-
-	"github.com/packetd/packetd/common/socket"
 )
 
 const (
@@ -40,35 +38,7 @@ const (
 	//
 	// 只在 Linux 平台生效
 	deviceAny = "any"
-
-	// defaultCaptureLength 默认的捕获长度
-	//
-	// 上限即 IP 包的最大长度
-	defaultCaptureLength = socket.MaxIPPacketSize
 )
-
-// hasIPv4Addr 判断网卡是否包含 ipv4 地址
-func hasIPv4Addr(iface net.Interface) bool {
-	addrs, err := iface.Addrs()
-	if err != nil || len(addrs) == 0 {
-		return false
-	}
-
-	for _, addr := range addrs {
-		var ip net.IP
-		switch v := addr.(type) {
-		case *net.IPNet:
-			ip = v.IP
-		case *net.IPAddr:
-			ip = v.IP
-		}
-
-		if ip != nil && ip.To4() != nil {
-			return true
-		}
-	}
-	return false
-}
 
 func ifaceAddress(iface net.Interface) []string {
 	addrs, err := iface.Addrs()

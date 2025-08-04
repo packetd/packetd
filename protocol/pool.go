@@ -15,10 +15,12 @@ package protocol
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
 
+	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/common/socket"
 	"github.com/packetd/packetd/connstream"
 	"github.com/packetd/packetd/internal/zerocopy"
@@ -27,7 +29,7 @@ import (
 
 var ErrConnClosed = errors.New("connection closed")
 
-type CreateConnPool func() ConnPool
+type CreateConnPool func(opts common.Options) ConnPool
 
 var poolFactory = map[socket.L7Proto]CreateConnPool{}
 
@@ -43,25 +45,6 @@ func Get(name socket.L7Proto) (CreateConnPool, error) {
 		return nil, errors.Errorf("connpool factory (%s) not found", name)
 	}
 	return f, nil
-}
-
-// Conn 代表着一个具体协议的应用层的链接
-type Conn interface {
-	// OnL4Packet 如果正确处理 Layer4 的数据包
-	// 返回是否写入成功
-	OnL4Packet(seg socket.L4Packet, ch chan<- socket.RoundTrip) error
-
-	// Free 释放链接相关资源
-	Free()
-
-	// Stats 返回 Conn 统计数据
-	Stats() []connstream.TupleStats
-
-	// IsClosed 返回链接是否关闭
-	IsClosed() bool
-
-	// ActiveAt 返回链接最后活跃时间
-	ActiveAt() time.Time
 }
 
 // CreateConnFunc 根据传入的 socket.Tuple 创建对应协议的 Conn
@@ -157,8 +140,10 @@ func (cp *connPool) Delete(st socket.Tuple) {
 		return
 	}
 
+	// st 成对出现 也要成对删除
 	conn.Free()
 	delete(cp.conns, st)
+	delete(cp.conns, st.Mirror())
 
 	if cp.frozen != nil {
 		cp.frozen.Set(st)
@@ -209,6 +194,9 @@ func (cp *connPool) Clean() {
 	if cp.frozen != nil {
 		cp.frozen.Close()
 	}
+
+	cp.mut.Lock()
+	defer cp.mut.Unlock()
 
 	for st, conn := range cp.conns {
 		conn.Free()
@@ -311,7 +299,9 @@ type L7TCPConn struct {
 	matcher    role.Matcher
 
 	l, r *socketDecoder
-	once sync.Once
+
+	once     sync.Once
+	released atomic.Bool
 
 	createRoundTrip CreateRoundTripFunc
 	createDecoder   CreateDecoderFunc
@@ -337,6 +327,7 @@ func (c *L7TCPConn) IsClosed() bool {
 func (c *L7TCPConn) Free() {
 	// 确保仅释放一次资源即可
 	c.once.Do(func() {
+		c.released.Store(true)
 		if c.l != nil && c.l.d != nil {
 			c.l.d.Free()
 		}
@@ -356,6 +347,10 @@ func (c *L7TCPConn) Stats() []connstream.TupleStats {
 
 // OnL4Packet 处理 L4 数据包
 func (c *L7TCPConn) OnL4Packet(pkt socket.L4Packet, ch chan<- socket.RoundTrip) error {
+	if c.released.Load() {
+		return nil
+	}
+
 	c.mut.Lock()
 	defer c.mut.Unlock()
 

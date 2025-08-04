@@ -61,6 +61,10 @@ const (
 	stateDecodePayload
 )
 
+const (
+	OptTrailerKeys = "trailerKeys"
+)
+
 // decoder HTTP/2 协议解析器
 //
 // decoder 利用支持单链接多 Stream 的协议数据解析 内部维护了 Stream 池
@@ -69,7 +73,6 @@ type decoder struct {
 	t0         time.Time
 	st         socket.TupleRaw
 	serverPort socket.Port
-	opt        *option
 
 	rbuf    *bytes.Buffer
 	hfd     *HeaderFieldDecoder
@@ -213,27 +216,12 @@ func (d *decoder) Decode(r zerocopy.Reader, t time.Time) ([]*role.Object, error)
 	return objs, nil
 }
 
-type option struct {
-	trailerKeys []string
-}
-type Option func(o *option)
-
-func WithTrailersOpt(keys ...string) Option {
-	return func(o *option) {
-		o.trailerKeys = keys
-	}
-}
-
-func NewDecoder(st socket.Tuple, serverPort socket.Port, opts ...Option) protocol.Decoder {
-	opt := &option{}
-	for _, f := range opts {
-		f(opt)
-	}
+func NewDecoder(st socket.Tuple, serverPort socket.Port, opts common.Options) protocol.Decoder {
+	trailerKeys, _ := opts.GetStringSlice(OptTrailerKeys)
 	return &decoder{
 		st:         st.ToRaw(),
 		serverPort: serverPort,
-		opt:        opt,
-		hfd:        NewHeaderFieldDecoder(opt.trailerKeys...),
+		hfd:        NewHeaderFieldDecoder(trailerKeys...),
 		rbuf:       bufpool.Acquire(),
 		prevData:   &streamData{},
 		streams:    make(map[uint32]*streamDecoder),

@@ -161,3 +161,85 @@ func TestListMatcher(t *testing.T) {
 		})
 	}
 }
+
+func TestFuzzyMatcher(t *testing.T) {
+	tests := []struct {
+		objs []*Object
+		want int
+	}{
+		{
+			objs: []*Object{
+				NewResponseObject(1),
+				NewRequestObject(1),
+			},
+			want: 1,
+		},
+		{
+			objs: []*Object{
+				NewResponseObject(1),
+				NewResponseObject(2),
+				NewRequestObject(1),
+			},
+			want: 1,
+		},
+		{
+			objs: []*Object{
+				NewResponseObject(2),
+				NewResponseObject(1),
+				NewResponseObject(3), // 不匹配
+				NewRequestObject(1),
+				NewRequestObject(2),
+			},
+			want: 2,
+		},
+		{
+			objs: []*Object{
+				NewRequestObject(1),
+				NewRequestObject(3),
+				NewResponseObject(2),
+				NewRequestObject(4), // 触发淘汰
+				NewRequestObject(2),
+				NewResponseObject(4),
+			},
+			want: 2,
+		},
+		{
+			objs: []*Object{
+				NewResponseObject(1),
+				NewRequestObject(1),
+				NewRequestObject(2),
+				NewResponseObject(2),
+				NewResponseObject(3),
+				NewRequestObject(3),
+			},
+			want: 3,
+		},
+		{
+			objs: []*Object{
+				NewResponseObject(3),
+				NewResponseObject(2),
+				NewResponseObject(1),
+				NewRequestObject(3),
+				NewRequestObject(2),
+				NewRequestObject(1),
+			},
+			want: 3,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			matcher := NewFuzzyMatcher(4, func(req, rsp *Object) bool {
+				return req.Obj.(int) == rsp.Obj.(int)
+			})
+
+			var count int
+			for _, obj := range tt.objs {
+				if matcher.Match(obj) != nil {
+					count++
+				}
+			}
+			assert.Equal(t, tt.want, count)
+		})
+	}
+}

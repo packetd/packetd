@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/common/socket"
 	"github.com/packetd/packetd/protocol"
 	"github.com/packetd/packetd/protocol/role"
@@ -27,7 +28,7 @@ func init() {
 }
 
 // NewConnPool 创建 HTTP 协议连接池
-func NewConnPool() protocol.ConnPool {
+func NewConnPool(opts common.Options) protocol.ConnPool {
 	return protocol.NewL7TCPConnPool(
 		role.NewSingleMatcher,
 		func(pair *role.Pair) socket.RoundTrip {
@@ -36,7 +37,9 @@ func NewConnPool() protocol.ConnPool {
 				response: pair.Response.Obj.(*Response),
 			}
 		},
-		NewDecoder,
+		func(st socket.Tuple, serverPort socket.Port) protocol.Decoder {
+			return NewDecoder(st, serverPort, opts)
+		},
 	)
 }
 

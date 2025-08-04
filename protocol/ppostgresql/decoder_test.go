@@ -239,7 +239,7 @@ func TestDecodeRequest(t *testing.T) {
 	var t0 time.Time
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDecoder(st, 0)
+			d := NewDecoder(st, 0, common.NewOptions())
 			var err error
 			var objs []*role.Object
 			for _, input := range tt.inputs {
@@ -366,7 +366,7 @@ func TestDecodeResponse(t *testing.T) {
 	var t0 time.Time
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDecoder(st, 5432)
+			d := NewDecoder(st, 5432, common.NewOptions())
 			var err error
 			var objs []*role.Object
 			for _, input := range tt.inputs {
@@ -455,7 +455,7 @@ func TestDecodeFailed(t *testing.T) {
 	var t0 time.Time
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDecoder(st, 3306)
+			d := NewDecoder(st, 3306, common.NewOptions())
 			var err error
 			var objs []*role.Object
 			for _, input := range tt.inputs {

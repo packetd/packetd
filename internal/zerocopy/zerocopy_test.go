@@ -50,7 +50,7 @@ func BenchmarkZeroCopyBuffer(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			buf := NewBuffer(nil)
-			buf.Write(bytes.Repeat([]byte("a"), socket.MaxIPPacketSize))
+			buf.Write(bytes.Repeat([]byte("a"), socket.MaxIPV4PacketSize))
 			for {
 				data, err := buf.Read(common.ReadWriteBlockSize)
 				if err != nil {
@@ -67,7 +67,7 @@ func BenchmarkBuffer(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			buf := bytes.NewBuffer(nil)
-			buf.Write(bytes.Repeat([]byte("a"), socket.MaxIPPacketSize))
+			buf.Write(bytes.Repeat([]byte("a"), socket.MaxIPV4PacketSize))
 			for {
 				data := make([]byte, common.ReadWriteBlockSize)
 				_, err := buf.Read(data)

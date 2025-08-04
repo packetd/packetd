@@ -48,6 +48,8 @@ func (c *httpConverter) matchLabels(req *phttp.Request, rsp *phttp.Response) lab
 			lbs = append(lbs, labels.Label{Name: "method", Value: req.Method})
 		case "request.path":
 			lbs = append(lbs, labels.Label{Name: "path", Value: req.Path})
+		case "request.remote_host":
+			lbs = append(lbs, labels.Label{Name: "remote_host", Value: req.RemoteHost})
 		case "response.status_code":
 			lbs = append(lbs, labels.Label{Name: "status_code", Value: strconv.Itoa(rsp.StatusCode)})
 		}

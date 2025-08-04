@@ -82,7 +82,6 @@ type decoder struct {
 	t0         time.Time
 	st         socket.TupleRaw
 	serverPort socket.Port
-	role       role.Role
 
 	payloadLen      uint32
 	payloadConsumed uint32
@@ -104,7 +103,7 @@ type decoder struct {
 	partial uint8
 }
 
-func NewDecoder(st socket.Tuple, serverPort socket.Port) protocol.Decoder {
+func NewDecoder(st socket.Tuple, serverPort socket.Port, _ common.Options) protocol.Decoder {
 	return &decoder{
 		st:            st.ToRaw(),
 		serverPort:    serverPort,

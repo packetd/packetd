@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/common/socket"
 	"github.com/packetd/packetd/internal/zerocopy"
 	"github.com/packetd/packetd/protocol/role"
@@ -215,7 +216,7 @@ func TestDecodeRequest(t *testing.T) {
 	var t0 time.Time
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDecoder(st, 0)
+			d := NewDecoder(st, 0, common.NewOptions())
 			var err error
 			var objs []*role.Object
 			for _, input := range tt.input {
@@ -405,7 +406,7 @@ func TestDecodeResponse(t *testing.T) {
 	var t0 time.Time
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDecoder(st, 3306)
+			d := NewDecoder(st, 3306, common.NewOptions())
 			var err error
 			var objs []*role.Object
 			for _, input := range tt.inputs {
@@ -479,7 +480,7 @@ func TestDecodeFailed(t *testing.T) {
 	var t0 time.Time
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDecoder(st, 3306)
+			d := NewDecoder(st, 3306, common.NewOptions())
 			var err error
 			var objs []*role.Object
 			for _, input := range tt.inputs {

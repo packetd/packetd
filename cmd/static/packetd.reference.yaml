@@ -38,18 +38,21 @@ sniffer.ifaces: 'any'
 # engine 指定监听引擎 目前仅支持 pcap
 sniffer.engine: pcap
 
-# Default: false
-# ipv4Only 是否只监听 ipv4 地址的网卡
-sniffer.ipv4Only: false
+# Default: ''
+# ipVersion 指定监听 ipv4/ipv6 可选值为
+# - v4
+# - v6
+# 空值或其他非法值均代表同时监听两者
+sniffer.ipVersion: ''
 
 # Default: false
-# noPromiscuous 是否关闭 promiscuous 模式
-sniffer.noPromiscuous: false
+# noPromisc 是否关闭 promiscuous 模式
+sniffer.noPromisc: false
 
 # Default: 16
 # blockNum 缓冲区 block 数量（仅 Linux 生效）
-# 实际代表着生成的 buffer 区域空间为 (1/2 * blockNum) MB 即默认 bufferSize 为 8MB
-# 该数值仅能设置为 16 的倍数 非法数值将重置为默认值
+# 实际代表着监听的`每个设备`生成的 buffer 区域空间为 (1/2 * blockNum) MB 即默认 bufferSize 为 8MB
+# 该数值仅能设置为 16 的倍数 非法数值将重置为默认值 最大值为 1024
 sniffer.blockNum: 16
 
 # Default: None
@@ -57,15 +60,18 @@ sniffer.blockNum: 16
 #  - name: 规则名称
 #  - protocol: 协议名称
 #  - ports: 端口号列表
+#  - host: Host 地址（可选）
 sniffer.protocols:
   rules:
 #    - name: "redis"
 #      protocol: "redis"
 #      ports: [6379]
+#      host: "127.0.0.1"
 #
 #    - name: "http"
 #      protocol: "http"
 #      ports: [80, 8080]
+#      host: "127.0.0.2"
 
 # Default: ''
 # file 指定是否从文件中加载网络包 与监听网卡选项互斥
@@ -117,6 +123,15 @@ controller.layer4Metrics:
 # 最小值为 1m
 controller.connExpired: 5m
 
+# decoder 解析特性配置
+controller.decoder:
+  mongodb:
+    # Default: false
+    # enableResponseCode 指定是否解析 Response Code/Ok 字段
+    # 解析这 2 个字段会带来大量 CPU 开销 高流量场景下可能会降低达成率
+    # 建议按需开启
+    enableResponseCode: false
+
 
 # ========== metricsStorage configuration ==========
 #
@@ -130,6 +145,7 @@ metricsStorage.expired: 5m
 
 # Default: false
 # vmHistogram 是否使用 vmhistogram 即 vmrange 特性
+# 详见 https://valyala.medium.com/improving-histogram-usability-for-prometheus-and-grafana-bc7e5df0e350
 metricsStorage.vmHistogram: false
 
 
@@ -181,6 +197,7 @@ processor:
           # commonLabels...
 #          - "request.method" # method
 #          - "request.path"  # path
+#          - "request.remote_host" # remote_host
 #          - "response.status_code" # status_code
 
       http2:
@@ -207,19 +224,16 @@ processor:
         requireLabels:
           # commonLabels...
 #          - "request.command" # command
-#          - "response.packet_type" # packet_type
 
       postgresql:
         requireLabels:
           # commonLabels...
 #          - "request.command" # command
-#          - "response.packet_type" # packet_type
 
       redis:
         requireLabels:
           # commonLabels...
 #          - "request.command" # command
-#          - "response.data_type"  # data_type
 
   # roundtripstotraces
   #
@@ -300,9 +314,9 @@ exporter.roundtrips:
   # console 是否输出到标准输出
   console: false
 
-  # Default: 'roundtrips.log'
+  # Default: 'packetd.roundtrips'
   # filename 输出文件
-  filename: "roundtrips.log"
+  filename: "packetd.roundtrips"
 
   # Default: 100(MB)
   # maxSize 单文件最大大小

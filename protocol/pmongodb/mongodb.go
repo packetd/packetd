@@ -16,6 +16,7 @@ package pmongodb
 import (
 	"time"
 
+	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/common/socket"
 	"github.com/packetd/packetd/protocol"
 	"github.com/packetd/packetd/protocol/role"
@@ -28,7 +29,7 @@ func init() {
 const maxRecordSize = 64
 
 // NewConnPool 创建 MongoDB 协议连接池
-func NewConnPool() protocol.ConnPool {
+func NewConnPool(opts common.Options) protocol.ConnPool {
 	return protocol.NewL7TCPConnPool(
 		func() role.Matcher {
 			return role.NewListMatcher(maxRecordSize, func(req, rsp *role.Object) bool {
@@ -41,22 +42,25 @@ func NewConnPool() protocol.ConnPool {
 				response: pair.Response.Obj.(*Response),
 			}
 		},
-		NewDecoder,
+		func(st socket.Tuple, serverPort socket.Port) protocol.Decoder {
+			return NewDecoder(st, serverPort, opts)
+		},
 	)
 }
 
 // Request MongoDB 请求
 type Request struct {
-	ID       int32
-	Host     string
-	Port     uint16
-	Proto    string
-	OpCode   string
-	Source   string
-	CmdName  string
-	CmdValue string
-	Size     int
-	Time     time.Time
+	ID         int32
+	Host       string
+	Port       uint16
+	Proto      string
+	OpCode     string
+	Source     string
+	Collection string
+	CmdName    string
+	CmdValue   string
+	Size       int
+	Time       time.Time
 }
 
 // Response MongoDB 响应

@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/common/socket"
 	"github.com/packetd/packetd/protocol"
 	"github.com/packetd/packetd/protocol/phttp2"
@@ -38,7 +39,7 @@ const (
 )
 
 // NewConnPool 创建 GRPC 协议连接池
-func NewConnPool() protocol.ConnPool {
+func NewConnPool(opts common.Options) protocol.ConnPool {
 	return protocol.NewL7TCPConnPool(
 		func() role.Matcher {
 			return role.NewListMatcher(phttp2.MaxConcurrentStreams, func(req, rsp *role.Object) bool {
@@ -52,7 +53,8 @@ func NewConnPool() protocol.ConnPool {
 			}
 		},
 		func(st socket.Tuple, serverPort socket.Port) protocol.Decoder {
-			return phttp2.NewDecoder(st, serverPort, phttp2.WithTrailersOpt(trailersGrpcStatus, trailersGrpcMessage))
+			opts.Merge(phttp2.OptTrailerKeys, []string{trailersGrpcStatus, trailersGrpcMessage})
+			return phttp2.NewDecoder(st, serverPort, opts)
 		},
 	)
 }

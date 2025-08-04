@@ -50,9 +50,10 @@ func TestDecodeSourceCommand(t *testing.T) {
 				0x06, 0x00, 0x00, 0x00, 'm', 'y', 'd', 'b', 0x00,
 			},
 			want: sourceCommand{
-				source:   "mydb",
-				cmdName:  "find",
-				cmdValue: "test",
+				source:     "mydb",
+				collection: "test",
+				cmdName:    "find",
+				cmdValue:   "test",
 			},
 		},
 		{
@@ -67,9 +68,10 @@ func TestDecodeSourceCommand(t *testing.T) {
 				0x0A, 0x00, 0x00, 0x00, 't', 'e', 's', 't', '.', 'c', 'o', 'l', 'l', 0x00,
 			},
 			want: sourceCommand{
-				source:   "test.coll",
-				cmdName:  "insert",
-				cmdValue: "coll",
+				source:     "test.coll",
+				collection: "coll",
+				cmdName:    "insert",
+				cmdValue:   "coll",
 			},
 		},
 		{
@@ -98,9 +100,10 @@ func TestDecodeSourceCommand(t *testing.T) {
 				0x10, 0x00, 0x00, 0x00, 'd', 'a', 't', 'a', 'b', 'a', 's', 'e', '_', 'n', 'a', 'm', 'e', 0x00,
 			},
 			want: sourceCommand{
-				source:   "database_name",
-				cmdName:  "update",
-				cmdValue: "collection",
+				source:     "database_name",
+				collection: "collection",
+				cmdName:    "update",
+				cmdValue:   "collection",
 			},
 		},
 		{
@@ -114,9 +117,10 @@ func TestDecodeSourceCommand(t *testing.T) {
 				0x0F, 0x00, 0x00, 0x00, 't', 'e', 's', 't', '.', 's', 'p', 'e', 'c', 'i', 'a', 'l', 0x00,
 			},
 			want: sourceCommand{
-				source:   "test.special",
-				cmdName:  "delete",
-				cmdValue: "val",
+				source:     "test.special",
+				collection: "val",
+				cmdName:    "delete",
+				cmdValue:   "val",
 			},
 		},
 		{
@@ -143,9 +147,10 @@ func TestDecodeSourceCommand(t *testing.T) {
 				0x06, 0x00, 0x00, 0x00, 'd', 'o', 'c', 's', 0x00,
 			},
 			want: sourceCommand{
-				source:   "mydb",
-				cmdName:  "count",
-				cmdValue: "docs",
+				source:     "mydb",
+				collection: "docs",
+				cmdName:    "count",
+				cmdValue:   "docs",
 			},
 		},
 		{
@@ -160,9 +165,10 @@ func TestDecodeSourceCommand(t *testing.T) {
 				0x0A, 0x00, 0x00, 0x00, 't', 'e', 's', 't', '.', 'c', 'o', 'l', 'l', 0x00,
 			},
 			want: sourceCommand{
-				source:   "test.coll",
-				cmdName:  "find",
-				cmdValue: "test",
+				source:     "test.coll",
+				collection: "test",
+				cmdName:    "find",
+				cmdValue:   "test",
 			},
 		},
 		{
@@ -177,9 +183,10 @@ func TestDecodeSourceCommand(t *testing.T) {
 				0x01, 0x00, 0x00, 0x00,
 			},
 			want: sourceCommand{
-				source:   "",
-				cmdName:  "create",
-				cmdValue: "coll",
+				source:     "",
+				collection: "coll",
+				cmdName:    "create",
+				cmdValue:   "coll",
 			},
 		},
 		{
@@ -199,9 +206,10 @@ func TestDecodeSourceCommand(t *testing.T) {
 				0x06, 0x00, 0x00, 0x00, 'a', 'n', 'a', 'l', 'y', 't', 'i', 'c', 's', 0x00,
 			},
 			want: sourceCommand{
-				source:   "analytics",
-				cmdName:  "mapReduce",
-				cmdValue: "job",
+				source:     "analytics",
+				collection: "job",
+				cmdName:    "mapReduce",
+				cmdValue:   "job",
 			},
 		},
 		{
@@ -563,7 +571,7 @@ func TestDecodeRequest(t *testing.T) {
 	var t0 time.Time
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDecoder(st, 0)
+			d := NewDecoder(st, 0, common.NewOptions())
 			var err error
 			var objs []*role.Object
 			for _, input := range tt.input {
@@ -752,7 +760,9 @@ func TestDecodeResponse(t *testing.T) {
 	var t0 time.Time
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDecoder(st, 0)
+			opts := common.NewOptions()
+			opts.Merge(OptEnableResponseCode, true)
+			d := NewDecoder(st, 0, opts)
 			var err error
 			var objs []*role.Object
 			for _, input := range tt.input {
@@ -862,7 +872,7 @@ func TestDecodeFailed(t *testing.T) {
 	var t0 time.Time
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDecoder(st, 0)
+			d := NewDecoder(st, 0, common.NewOptions())
 			objs, err := d.Decode(zerocopy.NewBuffer(tt.input), t0)
 			if tt.isErr {
 				assert.Error(t, err)

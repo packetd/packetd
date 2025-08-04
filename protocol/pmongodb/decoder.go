@@ -67,6 +67,9 @@ const (
 	// bsonInt32Type bson.Int32 类型标识
 	bsonInt32Type = 0x10
 
+	// bsonInt64Type bson.Int64 类型标识
+	bsonInt64Type = 0x12
+
 	// bsonBodySection body section 起始标识
 	bsonBodySection = 0x00
 )
@@ -82,6 +85,10 @@ const (
 	stateDecodePayload
 )
 
+const (
+	OptEnableResponseCode = "enableResponseCode"
+)
+
 type decoder struct {
 	st    socket.TupleRaw
 	t0    time.Time
@@ -95,11 +102,15 @@ type decoder struct {
 	payloadConsumed       int
 	bodySectionSize       int
 	bodySectionDrainBytes int
+
+	enableRspCode bool
 }
 
-func NewDecoder(st socket.Tuple, _ socket.Port) protocol.Decoder {
+func NewDecoder(st socket.Tuple, _ socket.Port, opts common.Options) protocol.Decoder {
+	enableRspCode, _ := opts.GetBool(OptEnableResponseCode)
 	return &decoder{
-		st: st.ToRaw(),
+		st:            st.ToRaw(),
+		enableRspCode: enableRspCode,
 	}
 }
 
@@ -206,16 +217,17 @@ func (d *decoder) archive() *role.Object {
 		}
 
 		obj := role.NewRequestObject(&Request{
-			Host:     d.st.SrcIP,
-			Port:     d.st.SrcPort,
-			ID:       d.msgHdr.reqID,
-			Proto:    PROTO,
-			OpCode:   opcodes[opcode(d.msgHdr.opCode)],
-			Source:   d.sourceCmd.source,
-			CmdName:  d.sourceCmd.cmdName,
-			CmdValue: d.sourceCmd.cmdValue,
-			Size:     d.payloadConsumed,
-			Time:     d.reqTime,
+			Host:       d.st.SrcIP,
+			Port:       d.st.SrcPort,
+			ID:         d.msgHdr.reqID,
+			Proto:      PROTO,
+			OpCode:     opcodes[opcode(d.msgHdr.opCode)],
+			Source:     d.sourceCmd.source,
+			Collection: d.sourceCmd.collection,
+			CmdName:    d.sourceCmd.cmdName,
+			CmdValue:   d.sourceCmd.cmdValue,
+			Size:       d.payloadConsumed,
+			Time:       d.reqTime,
 		})
 		return obj
 	}
@@ -373,6 +385,9 @@ func (d *decoder) decodeBodySection(b []byte) {
 		if sc.source != "" {
 			d.sourceCmd.source = sc.source
 		}
+		if sc.collection != "" {
+			d.sourceCmd.collection = sc.collection
+		}
 		if sc.cmdName != "" && sc.cmdValue != "" {
 			d.sourceCmd.cmdName = sc.cmdName
 			d.sourceCmd.cmdValue = sc.cmdValue
@@ -380,11 +395,11 @@ func (d *decoder) decodeBodySection(b []byte) {
 		return
 	}
 
-	oc := decodeOkCode(b[l:r])
-	if oc.ok != -1 {
+	// 解析 Response Code/Ok 会带来大量的 CPU 开销
+	// 建议按需启用（默认不开启）
+	if d.enableRspCode {
+		oc := decodeOkCode(b[l:r])
 		d.okCode.ok = oc.ok
-	}
-	if oc.code != -1 {
 		d.okCode.code = oc.code
 	}
 }
@@ -445,9 +460,10 @@ func decodeInt32(b []byte) (int32, error) {
 }
 
 type sourceCommand struct {
-	source   string
-	cmdName  string
-	cmdValue string
+	source     string
+	collection string
+	cmdName    string
+	cmdValue   string
 }
 
 func (sc sourceCommand) IsEmpty() bool {
@@ -466,14 +482,24 @@ func decodeSourceCommand(b []byte) sourceCommand {
 
 	var cmd *kv
 	var source string
+	var collection string
 
 	splitStringBsonTypePos(b, func(typePos bsonTypePositions) bool {
 		key := string(b[typePos[0].pos+1 : typePos[1].pos])
 		if cmd == nil && isCommand(key) {
+			val := string(b[typePos[1].pos+bsonGapKeyValue : typePos[2].pos])
 			cmd = &kv{
 				k: key,
-				v: string(b[typePos[1].pos+bsonGapKeyValue : typePos[2].pos]),
+				v: val,
 			}
+
+			if isCommandWithCollection(key) {
+				collection = val
+			}
+		}
+
+		if collection == "" && key == "collection" {
+			collection = string(b[typePos[1].pos+bsonGapKeyValue : typePos[2].pos])
 		}
 
 		if source == "" {
@@ -499,8 +525,10 @@ func decodeSourceCommand(b []byte) sourceCommand {
 	})
 
 	sc := sourceCommand{
-		source: source,
+		collection: collection,
+		source:     source,
 	}
+
 	if cmd != nil {
 		sc.cmdName = cmd.k
 		sc.cmdValue = cmd.v
@@ -513,6 +541,7 @@ func decodeSourceCommand(b []byte) sourceCommand {
 	// 部分命令是数值类型的响应 再这里再次尝试解析 如
 	// {"hello": 1}
 	// {"listDatabases": 1}
+	// {"getMore": 1000}
 	splitIntOrDoubleBsonTypePos(b, func(typePos bsonTypePositions) bool {
 		key := string(b[typePos[0].pos+1 : typePos[1].pos])
 		if !isCommand(key) {
@@ -531,6 +560,13 @@ func decodeSourceCommand(b []byte) sourceCommand {
 				return false
 			}
 			cmdVal = float64(binary.LittleEndian.Uint32(b[l:r]))
+
+		case bsonInt64Type:
+			r := l + 8 // 8 字节小端整型
+			if len(b) < r {
+				return false
+			}
+			cmdVal = float64(binary.LittleEndian.Uint64(b[l:r]))
 
 		case bsonDoubleType:
 			r := l + 8 // 8 字节 IEEE754 浮点数
@@ -724,6 +760,16 @@ func splitIntOrDoubleBsonTypePos(b []byte, f func(bsonTypePositions) bool) {
 			}
 			typePositions = append(typePositions, typePosition{
 				typ: bsonInt32Type,
+				pos: cursor,
+			})
+
+		case bsonInt64Type:
+			// 必须为第一个元素
+			if len(typePositions) != 0 {
+				typePositions = bsonTypePositions{}
+			}
+			typePositions = append(typePositions, typePosition{
+				typ: bsonInt64Type,
 				pos: cursor,
 			})
 

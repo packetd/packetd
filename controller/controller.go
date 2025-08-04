@@ -39,29 +39,10 @@ import (
 	"github.com/packetd/packetd/sniffer"
 )
 
-type Config struct {
-	// Layer4Metrics 四层指标统计
-	Layer4Metrics struct {
-		Enabled        bool     `config:"enabled"`
-		RequiredLabels []string `config:"requiredLabels"`
-	} `config:"layer4Metrics"`
-
-	// ConnExpired 未活跃链接过期时间
-	ConnExpired time.Duration `config:"connExpired"`
-}
-
-func (c Config) GetConnExpired() time.Duration {
-	if c.ConnExpired < time.Minute {
-		return 5 * time.Minute
-	}
-	return c.ConnExpired
-}
-
 type Controller struct {
-	ctx       context.Context
-	cancel    context.CancelFunc
-	cfg       Config
-	buildInfo common.BuildInfo
+	ctx    context.Context
+	cancel context.CancelFunc
+	cfg    Config
 
 	pl   *pipeline.Pipeline
 	exp  *exporter.Exporter
@@ -80,7 +61,7 @@ func setupLogger(conf *confengine.Config) error {
 	}
 
 	if opts.Filename == "" {
-		opts.Filename = "packetd.log"
+		opts.Filename = "packetd.roundtrip"
 	}
 	if opts.MaxBackups <= 0 {
 		opts.MaxBackups = 10
@@ -96,7 +77,12 @@ func setupLogger(conf *confengine.Config) error {
 	return nil
 }
 
-func New(conf *confengine.Config, buildInfo common.BuildInfo) (*Controller, error) {
+func New(conf *confengine.Config) (*Controller, error) {
+	var cfg Config
+	if err := conf.UnpackChild("controller", &cfg); err != nil {
+		return nil, err
+	}
+
 	if err := setupLogger(conf); err != nil {
 		return nil, err
 	}
@@ -126,22 +112,17 @@ func New(conf *confengine.Config, buildInfo common.BuildInfo) (*Controller, erro
 		return nil, err
 	}
 
-	pps, err := newPortPools(snif.L7Ports())
+	pps, err := newPortPools(snif.L7Ports(), cfg.Decoder)
 	if err != nil {
 		return nil, err
 	}
 
-	var cfg Config
-	if err := conf.UnpackChild("controller", &cfg); err != nil {
-		return nil, err
-	}
 	roundtrips := make(chan socket.RoundTrip, common.Concurrency())
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Controller{
 		ctx:        ctx,
 		cancel:     cancel,
 		cfg:        cfg,
-		buildInfo:  buildInfo,
 		pl:         pl,
 		snif:       snif,
 		pps:        pps,
@@ -185,6 +166,11 @@ func (c *Controller) Start() error {
 			return
 		}
 		if errors.Is(err, protocol.ErrConnClosed) {
+			// 删除链接前先记录 Stats
+			// 避免 metrics 接口还没来得及记录 conn 就已经被删除
+			for _, stat := range conn.Stats() {
+				c.updatePoolStats(stat)
+			}
 			pool.Delete(pkt.SocketTuple())
 			return
 		}
@@ -211,7 +197,9 @@ func (c *Controller) removeExpiredConn() {
 
 func (c *Controller) recordMetrics() {
 	uptime.Set(float64(time.Now().Unix() - common.Started()))
-	buildInfo.WithLabelValues(c.buildInfo.Version, c.buildInfo.GitHash, c.buildInfo.Time).Inc()
+
+	bi := common.GetBuildInfo()
+	buildInfo.WithLabelValues(bi.Version, bi.GitHash, bi.Time).Inc()
 	for _, s := range c.snif.Stats() {
 		snifferReceivedPackets.WithLabelValues(s.Name).Set(float64(s.Packets))
 		snifferDroppedPackets.WithLabelValues(s.Name).Set(float64(s.Drops))
@@ -280,7 +268,6 @@ func (c *Controller) updatePoolStats(stats connstream.TupleStats) {
 			metricstorage.NewCounterConstMetric("tcp_received_packets_total", float64(ss.ReceivedPackets), lbs),
 			metricstorage.NewCounterConstMetric("tcp_received_bytes_total", float64(ss.ReceivedBytes), lbs),
 			metricstorage.NewCounterConstMetric("tcp_skipped_packets_total", float64(ss.SkippedPackets), lbs),
-			metricstorage.NewCounterConstMetric("tcp_inserted_packets_total", float64(ss.InsertedPackets), lbs),
 		)
 
 	case socket.L4ProtoUDP:
@@ -309,7 +296,7 @@ func (c *Controller) Reload(conf *confengine.Config) error {
 	if err := c.snif.Reload(&cfg); err != nil {
 		return err
 	}
-	return c.pps.Reload(c.snif.L7Ports())
+	return c.pps.Reload(c.snif.L7Ports(), c.cfg.Decoder)
 }
 
 func (c *Controller) Stop() {

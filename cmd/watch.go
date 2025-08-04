@@ -23,18 +23,17 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/confengine"
 	"github.com/packetd/packetd/controller"
 	"github.com/packetd/packetd/internal/sigs"
 )
 
-type logCmdConfig struct {
+type watchCmdConfig struct {
 	Console          bool
 	File             string
 	Ifaces           string
-	IPv4Only         bool
-	NoPromiscuous    bool
+	IPVersion        string
+	NoPromisc        bool
 	RoundtripFile    string
 	RoundtripSize    int
 	RoundtripBackups int
@@ -48,7 +47,7 @@ type protoConfig struct {
 	Host     string
 }
 
-func (c *logCmdConfig) decodeProtoConfig() []protoConfig {
+func (c *watchCmdConfig) decodeProtoConfig() []protoConfig {
 	var pcs []protoConfig
 	for idx, proto := range c.Protocols {
 		parts := strings.Split(proto, ";")
@@ -76,7 +75,7 @@ func (c *logCmdConfig) decodeProtoConfig() []protoConfig {
 	return pcs
 }
 
-func (c *logCmdConfig) Yaml() []byte {
+func (c *watchCmdConfig) Yaml() []byte {
 	text := `
 controller:
 processor:
@@ -89,8 +88,8 @@ logger:
 sniffer:
   ifaces: {{ .Ifaces }}
   file: {{ .File }}
-  ipv4Only: {{ .IPv4Only }}
-  noPromiscuous: {{ .NoPromiscuous }}
+  ipVersion: {{ .IPVersion }}
+  noPromisc: {{ .NoPromisc }}
   protocols:
     rules:
 {{ range .Protos }}
@@ -121,7 +120,8 @@ exporter:
 		"File":             c.File,
 		"Console":          c.Console,
 		"Ifaces":           c.Ifaces,
-		"IPv4Only":         c.IPv4Only,
+		"IPVersion":        c.IPVersion,
+		"NoPromisc":        c.NoPromisc,
 		"Protos":           c.decodeProtoConfig(),
 		"RoundtripFile":    c.RoundtripFile,
 		"RoundtripSize":    c.RoundtripSize,
@@ -133,23 +133,19 @@ exporter:
 	return buf.Bytes()
 }
 
-var logConfig logCmdConfig
+var watchConfig watchCmdConfig
 
-var logCmd = &cobra.Command{
-	Use:   "log",
-	Short: "Capture and log network traffic roundtrip",
+var watchCmd = &cobra.Command{
+	Use:   "watch",
+	Short: "Capture and log network traffic roundtrips",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg, err := confengine.LoadContent(logConfig.Yaml())
+		cfg, err := confengine.LoadContent(watchConfig.Yaml())
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)
 			os.Exit(1)
 		}
 
-		ctr, err := controller.New(cfg, common.BuildInfo{
-			Version: version,
-			GitHash: gitHash,
-			Time:    buildTime,
-		})
+		ctr, err := controller.New(cfg)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to create controller: %v\n"+
 				"Note: This operation may requires root privileges (try running with 'sudo')", err)
@@ -163,18 +159,18 @@ var logCmd = &cobra.Command{
 		<-sigs.Terminate()
 		ctr.Stop()
 	},
-	Example: "# packetd log --proto 'http;80,8080' --proto 'dns;53' --ifaces any --console",
+	Example: "# packetd watch --proto 'http;80,8080' --proto 'dns;53' --ifaces any --console",
 }
 
 func init() {
-	logCmd.Flags().BoolVar(&logConfig.Console, "console", false, "Enable console logging")
-	logCmd.Flags().BoolVar(&logConfig.NoPromiscuous, "no-promiscuous", false, "Don't put the interface into promiscuous mode")
-	logCmd.Flags().StringVar(&logConfig.File, "pcap.file", "", "Path to pcap file to read from")
-	logCmd.Flags().StringVar(&logConfig.Ifaces, "ifaces", "any", "Network interfaces to monitor (supports regex), 'any' for all interfaces")
-	logCmd.Flags().StringSliceVar(&logConfig.Protocols, "proto", nil, "Protocols to capture in 'protocol;ports[;host]' format, multiple protocols supported")
-	logCmd.Flags().BoolVar(&logConfig.IPv4Only, "ipv4", false, "Capture IPv4 traffic only")
-	logCmd.Flags().StringVar(&logConfig.RoundtripFile, "roundtrip.file", "packetd.roundtrip", "Path to roundtrip file")
-	logCmd.Flags().IntVar(&logConfig.RoundtripSize, "roundtrip.size", 100, "Maximum size of roundtrip file in MB")
-	logCmd.Flags().IntVar(&logConfig.RoundtripBackups, "roundtrip.backups", 10, "Maximum number of old roundtrip files to retain")
-	rootCmd.AddCommand(logCmd)
+	watchCmd.Flags().BoolVar(&watchConfig.Console, "console", false, "Enable console logging")
+	watchCmd.Flags().BoolVar(&watchConfig.NoPromisc, "no-promisc", false, "Don't put the interface into promiscuous mode")
+	watchCmd.Flags().StringVar(&watchConfig.File, "pcap-file", "", "Path to pcap file to read from")
+	watchCmd.Flags().StringVar(&watchConfig.Ifaces, "ifaces", "any", "Network interfaces to monitor (supports regex), 'any' for all interfaces")
+	watchCmd.Flags().StringSliceVar(&watchConfig.Protocols, "proto", nil, "Protocols to capture in 'protocol;ports[;host]' format, multiple protocols supported")
+	watchCmd.Flags().StringVar(&watchConfig.IPVersion, "ipv", "", "Filter by IP version [v4|v6]. Defaults to both")
+	watchCmd.Flags().StringVar(&watchConfig.RoundtripFile, "roundtrips.file", "packetd.roundtrips", "Path to roundtrips file")
+	watchCmd.Flags().IntVar(&watchConfig.RoundtripSize, "roundtrips.size", 100, "Maximum size of roundtrips file in MB")
+	watchCmd.Flags().IntVar(&watchConfig.RoundtripBackups, "roundtrips.backups", 10, "Maximum number of old roundtrips files to retain")
+	rootCmd.AddCommand(watchCmd)
 }

@@ -63,7 +63,7 @@ type decoder struct {
 	stack       *stack
 }
 
-func NewDecoder(st socket.Tuple, serverPort socket.Port) protocol.Decoder {
+func NewDecoder(st socket.Tuple, serverPort socket.Port, _ common.Options) protocol.Decoder {
 	return &decoder{
 		st:         st.ToRaw(),
 		serverPort: serverPort,

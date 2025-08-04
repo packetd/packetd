@@ -21,6 +21,8 @@ import (
 	"github.com/packetd/packetd/protocol/predis"
 )
 
+// https://opentelemetry.io/docs/specs/semconv/database/redis/
+
 func init() {
 	register(socket.L7ProtoRedis, newRedisConverter())
 }

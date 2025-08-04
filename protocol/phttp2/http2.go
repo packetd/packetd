@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/common/socket"
 	"github.com/packetd/packetd/protocol"
 	"github.com/packetd/packetd/protocol/role"
@@ -41,7 +42,7 @@ const (
 )
 
 // NewConnPool 创建 HTTP2 协议连接池
-func NewConnPool() protocol.ConnPool {
+func NewConnPool(opts common.Options) protocol.ConnPool {
 	return protocol.NewL7TCPConnPool(
 		func() role.Matcher {
 			return role.NewListMatcher(MaxConcurrentStreams, func(req, rsp *role.Object) bool {
@@ -55,7 +56,7 @@ func NewConnPool() protocol.ConnPool {
 			}
 		},
 		func(st socket.Tuple, serverPort socket.Port) protocol.Decoder {
-			return NewDecoder(st, serverPort)
+			return NewDecoder(st, serverPort, opts)
 		},
 	)
 }
