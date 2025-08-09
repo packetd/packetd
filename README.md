@@ -24,25 +24,27 @@ packetd 提供了更加现代化的可观测手段，可以无缝地对接现有
 
 ## 🔰 Installation
 
+### Dependencies
+
 packetd 使用 `libpcap` 作为其底层监听网络包监听方案，因此先安装该依赖库（大部分操作系统已内置）。
 
-**Debian/Ubuntu**
+*Debian/Ubuntu*
 
 ```shell
 $ sudo apt-get install libpcap-dev
 ```
 
-**CentOS/Fedora**
+*CentOS/Fedora*
 
 ```shell
 $ sudo yum install libpcap libpcap-devel
 ```
 
-**Windows**
+*Windows*
 
 Windows 系统需要先安装 [npcap](https://nmap.org/npcap/)。
 
-### From Binary
+### Build from binary
 
 使用 `go install` 安装二进制文件。
 
@@ -50,7 +52,7 @@ Windows 系统需要先安装 [npcap](https://nmap.org/npcap/)。
 $ go install github.com/packetd/packetd@latest
 ```
 
-### From SourceCode
+### Build from sourceCode
 
 使用源码构建。
 
@@ -60,7 +62,7 @@ $ make build
 # $ mv packetd /usr/local/bin
 ```
 
-### From Docker
+### Run with Docker
 
 ```shell
 # 使用 host network 可以观察主机网络情况
