@@ -42,3 +42,8 @@ build:
 	-X $(PKG)/common.buildTime=$(shell date -u '+%Y-%m-%d_%I:%M:%S%p') \
 	-X $(PKG)/common.buildGitHash=$(shell git rev-parse HEAD)" \
 	-o packetd .
+
+.PHONY: push-images
+images:
+	docker build -t chenjiandongx/packetd:$(VERSION) .
+	docker push chenjiandongx/packetd:$(VERSION)
