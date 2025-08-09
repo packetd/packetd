@@ -12,6 +12,7 @@ help:
 	@echo " test: Run unit tests"
 	@echo " build: Build Go package"
 	@echo " install-tools: Install dev tools"
+	@echo " push-images: Push Docker images"
 
 .PHONY: lint
 lint:
@@ -44,6 +45,6 @@ build:
 	-o packetd .
 
 .PHONY: push-images
-images:
+push-images:
 	docker build -t chenjiandongx/packetd:$(VERSION) .
 	docker push chenjiandongx/packetd:$(VERSION)
