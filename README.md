@@ -42,11 +42,15 @@ $ sudo yum install libpcap libpcap-devel
 
 Windows 系统需要先安装 [npcap](https://nmap.org/npcap/)。
 
+### From Binary
+
 使用 `go install` 安装二进制文件。
 
 ```shell
 $ go install github.com/packetd/packetd@latest
 ```
+
+### From SourceCode
 
 使用源码构建。
 
@@ -54,6 +58,16 @@ $ go install github.com/packetd/packetd@latest
 $ git clone https://github.com/packetd/packetd.git
 $ make build
 # $ mv packetd /usr/local/bin
+```
+
+### From Docker
+
+```shell
+# 使用 host network 可以观察主机网络情况
+$ docker run --network host chenjiandongx/packetd:v0.0.1 watch --proto 'http;80' --ifaces any --console
+
+# 或者将本地配置文件挂载到容器内
+$ docker run --network host -v /my/packetd.yaml:/packetd.yaml chenjiandongx/packetd:v0.0.1 agent --config /packetd.yaml 
 ```
 
 ## 🚀 Quickstart
