@@ -12,6 +12,7 @@ help:
 	@echo " test: Run unit tests"
 	@echo " build: Build Go package"
 	@echo " install-tools: Install dev tools"
+	@echo " push-images: Push Docker images"
 
 .PHONY: lint
 lint:
@@ -42,3 +43,8 @@ build:
 	-X $(PKG)/common.buildTime=$(shell date -u '+%Y-%m-%d_%I:%M:%S%p') \
 	-X $(PKG)/common.buildGitHash=$(shell git rev-parse HEAD)" \
 	-o packetd .
+
+.PHONY: push-images
+push-images:
+	docker build -t chenjiandongx/packetd:$(VERSION) .
+	docker push chenjiandongx/packetd:$(VERSION)
