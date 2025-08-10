@@ -2,7 +2,7 @@
 
 > 本文档描述了 packetd 整体架构设计思路。
 
-***packetd 架构图：***
+*packetd 架构图：*
 
 ![arch.png](./images/arch.png)
 
@@ -16,7 +16,7 @@
 
 解析层负责承上启下，上接监听层，下接处理层，其内部运行逻辑大致如下：
 
-![decoder-layer](./images/decode-layer.png)
+![decode-layer](./images/decode-layer.png)
 
 Stream 表示单向数据流，即 Conn 是由一对 Stream 共同组成的。
 
@@ -113,3 +113,61 @@ type Processor interface {
 ```
 
 processor 由 pipeline 调度，pipeline 会在每条数据进来时执行 pipeline 定义的所有的 processor。
+
+```yaml
+# 定义 processor
+processor:
+  - name: roundtripstometrics
+    config:
+      http:
+        requireLabels:
+          - "server.host"
+          - "server.port"
+          - "request.method"
+          - "request.path"
+          - "response.status_code"
+
+  - name: roundtripstotraces
+    config:
+
+# 定义 pipeline
+# pipeline 按序执行每一个 processor
+pipeline:
+  - name: "traces/common"
+    processors:
+      - roundtripstotraces
+
+  - name: "metrics/common"
+    processors:
+      - roundtripstometrics
+```
+
+## Export Layer
+
+上报层负责将数据上报到不同的存储后端，或者本地文件输出。
+
+![export-layer](./images/export-layer.png)
+
+```yaml
+exporter:
+  traces:
+    enabled: false
+    endpoint: http://localhost:4318/v1/traces
+    batch: 10
+    interval: 3s
+
+  metrics:
+    enabled: false
+    endpoint: http://localhost:8428/api/v1/write
+    interval: 15s
+
+  roundtrips:
+    enabled: false
+    console: true
+    filename: "packetd.roundtrips"
+    maxSize: 100
+    maxBackups: 10
+    maxAge: 30
+```
+
+packetd 支持以各种协议将数据输出到各种后端，可同时配置多个 exporter。
