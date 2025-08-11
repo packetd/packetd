@@ -46,5 +46,5 @@ build:
 
 .PHONY: push-images
 push-images:
-	docker build -t chenjiandongx/packetd:$(VERSION) .
-	docker push chenjiandongx/packetd:$(VERSION)
+	docker build -t packetd/packetd:$(VERSION) .
+	docker push packetd/packetd:$(VERSION)

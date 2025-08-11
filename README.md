@@ -66,10 +66,10 @@ $ make build
 
 ```shell
 # 使用 host network 可以观察主机网络情况
-$ docker run --network host chenjiandongx/packetd:v0.0.1 watch --proto 'http;80' --ifaces any --console
+$ docker run --network host packetd/packetd:v0.0.1 watch --proto 'http;80' --ifaces any --console
 
 # 或者将本地配置文件挂载到容器内
-$ docker run --network host -v /my/packetd.yaml:/packetd.yaml chenjiandongx/packetd:v0.0.1 agent --config /packetd.yaml 
+$ docker run --network host -v /my/packetd.yaml:/packetd.yaml packetd/packetd:v0.0.1 agent --config /packetd.yaml 
 ```
 
 ## 🚀 Quickstart
