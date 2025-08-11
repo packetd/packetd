@@ -17,21 +17,18 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-)
 
-var (
-	version   = "unknown.version"
-	gitHash   = "unknown.gitHash"
-	buildTime = "unknown.buildTime"
+	"github.com/packetd/packetd/common"
 )
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Display version information",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Version:", version)
-		fmt.Println("GitHash:", gitHash)
-		fmt.Println("BuildTime:", buildTime)
+		bi := common.GetBuildInfo()
+		fmt.Println("Version:", bi.Version)
+		fmt.Println("GitHash:", bi.GitHash)
+		fmt.Println("BuildTime:", bi.Time)
 	},
 }
 
