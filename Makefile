@@ -41,7 +41,7 @@ build:
 	-s -w \
 	-X $(PKG)/common.buildVersion=$(VERSION) \
 	-X $(PKG)/common.buildTime=$(shell date -u '+%Y-%m-%d_%I:%M:%S%p') \
-	-X $(PKG)/common.buildGitHash=$(shell git rev-parse HEAD)" \
+	-X $(PKG)/common.buildHash=$(shell git rev-parse HEAD)" \
 	-o packetd .
 
 .PHONY: push-images
