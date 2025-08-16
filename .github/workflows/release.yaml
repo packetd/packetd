@@ -6,8 +6,37 @@ on:
       - 'v*.*.*'
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: amd64
+            goos: linux
+            goarch: amd64
+            cgo: 1
+          - os: ubuntu-latest
+            arch: arm64
+            goos: linux
+            goarch: arm64
+            cgo: 0  # 暂时禁用，避免交叉编译问题
+          - os: ubuntu-latest
+            arch: amd64
+            goos: darwin
+            goarch: amd64
+            cgo: 0
+          - os: ubuntu-latest
+            arch: amd64
+            goos: darwin
+            goarch: arm64
+            cgo: 0
+          - os: ubuntu-latest
+            arch: amd64
+            goos: windows
+            goarch: amd64
+            cgo: 0
+
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,14 +48,11 @@ jobs:
         with:
           go-version: '1.24.0'
 
-      - name: Install system dependencies
+      - name: Install system dependencies (Linux with CGO)
+        if: matrix.goos == 'linux' && matrix.cgo == 1
         run: |
           sudo apt-get update
-          sudo apt-get install -y libpcap-dev gcc-multilib gcc-aarch64-linux-gnu
-          # 安装 ARM64 版本的 libpcap
-          sudo dpkg --add-architecture arm64
-          sudo apt-get update
-          sudo apt-get install -y libpcap-dev:arm64
+          sudo apt-get install -y libpcap-dev
 
       - name: Install dependencies
         run: make mod
@@ -35,63 +61,43 @@ jobs:
         run: make tools
 
       - name: Run tests
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
         run: make test
 
-      - name: Create dist directory
-        run: mkdir -p dist
-
-      - name: Build cross-platform binaries
+      - name: Build binary
         run: |
           VERSION=$(cat VERSION)
           COMMIT=$(git rev-parse HEAD)
           BUILD_DATE=$(date -u '+%Y-%m-%d_%H:%M:%S')
+          
+          output_name="packetd-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            output_name+=".exe"
+          fi
 
-          # Build for Linux amd64 (native compilation)
-          echo "Building for linux/amd64..."
-          CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build \
+          CGO_ENABLED=${{ matrix.cgo }} GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
             -ldflags="-s -w -X 'github.com/packetd/packetd/common.buildVersion=${VERSION}' -X 'github.com/packetd/packetd/common.buildTime=${BUILD_DATE}' -X 'github.com/packetd/packetd/common.buildHash=${COMMIT}'" \
-            -o "dist/packetd-${VERSION}-linux-amd64" .
+            -o "${output_name}" .
 
-          # Build for Linux arm64 (cross compilation)
-          echo "Building for linux/arm64..."
-          CGO_ENABLED=1 GOOS=linux GOARCH=arm64 CC=aarch64-linux-gnu-gcc \
-          PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig go build \
-            -ldflags="-s -w -X 'github.com/packetd/packetd/common.buildVersion=${VERSION}' -X 'github.com/packetd/packetd/common.buildTime=${BUILD_DATE}' -X 'github.com/packetd/packetd/common.buildHash=${COMMIT}'" \
-            -o "dist/packetd-${VERSION}-linux-arm64" .
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: binaries
+          path: packetd-*
 
-          # Build for other platforms without pcap (CGO disabled)
-          platforms_nocgo=(
-            "darwin/amd64"
-            "darwin/arm64"
-            "windows/amd64"
-            "freebsd/amd64"
-          )
-
-          for platform in "${platforms_nocgo[@]}"; do
-            GOOS=${platform%/*}
-            GOARCH=${platform#*/}
-            output_name="packetd-${VERSION}-${GOOS}-${GOARCH}"
-
-            if [ "$GOOS" = "windows" ]; then
-              output_name+=".exe"
-            fi
-
-            echo "Building for $GOOS/$GOARCH (without CGO)..."
-            CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build \
-              -ldflags="-s -w -X 'github.com/packetd/packetd/common.buildVersion=${VERSION}' -X 'github.com/packetd/packetd/common.buildTime=${BUILD_DATE}' -X 'github.com/packetd/packetd/common.buildHash=${COMMIT}'" \
-              -o "dist/${output_name}" .
-          done
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: binaries
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            dist/packetd-linux-amd64
-            dist/packetd-linux-arm64
-            dist/packetd-windows-amd64.exe
-            dist/packetd-darwin-amd64
-            dist/packetd-darwin-arm64
-            dist/packetd-freebsd-amd64
+          files: packetd-*
           generate_release_notes: true
           draft: false
           prerelease: false
