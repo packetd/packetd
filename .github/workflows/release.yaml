@@ -26,10 +26,6 @@ jobs:
             goos: darwin
             goarch: arm64
             cgo: 0
-          - os: ubuntu-latest
-            goos: windows
-            goarch: amd64
-            cgo: 0
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -48,6 +44,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libpcap-dev
+
+      - name: Install system dependencies (macOS)
+        if: matrix.goos == 'darwin'
+        run: |
+          brew install libpcap
 
       - name: Install dependencies
         run: make mod
