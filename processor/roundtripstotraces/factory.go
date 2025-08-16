@@ -14,9 +14,6 @@
 package roundtripstotraces
 
 import (
-	"crypto/rand"
-
-	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	"github.com/packetd/packetd/common"
@@ -66,27 +63,3 @@ func (f *Factory) Process(record *common.Record) (*common.Record, error) {
 }
 
 func (f *Factory) Clean() {}
-
-// randomTraceID 随机生成 randomTraceID
-func randomTraceID() pcommon.TraceID {
-	b := make([]byte, 16)
-	rand.Read(b)
-
-	ret := [16]byte{}
-	for i := 0; i < 16; i++ {
-		ret[i] = b[i]
-	}
-	return ret
-}
-
-// randomSpanID 随机生成 randomSpanID
-func randomSpanID() pcommon.SpanID {
-	b := make([]byte, 8)
-	rand.Read(b)
-
-	ret := [8]byte{}
-	for i := 0; i < 8; i++ {
-		ret[i] = b[i]
-	}
-	return ret
-}

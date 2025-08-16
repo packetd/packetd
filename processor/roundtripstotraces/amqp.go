@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	"github.com/packetd/packetd/common/socket"
+	"github.com/packetd/packetd/internal/tracekit"
 	"github.com/packetd/packetd/protocol/pamqp"
 )
 
@@ -44,8 +45,8 @@ func (c *amqpConverter) Convert(rt socket.RoundTrip) ptrace.Span {
 	name := req.ClassMethod.Class + "." + req.ClassMethod.Method
 	span := ptrace.NewSpan()
 	span.SetName(name)
-	span.SetTraceID(randomTraceID())
-	span.SetSpanID(randomSpanID())
+	span.SetTraceID(tracekit.RandomTraceID())
+	span.SetSpanID(tracekit.RandomSpanID())
 	span.SetStartTimestamp(pcommon.NewTimestampFromTime(req.Time))
 	span.SetEndTimestamp(pcommon.NewTimestampFromTime(rsp.Time))
 

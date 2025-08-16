@@ -14,12 +14,14 @@
 package roundtripstotraces
 
 import (
+	"net/http"
 	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	"github.com/packetd/packetd/common/socket"
+	"github.com/packetd/packetd/internal/tracekit"
 	"github.com/packetd/packetd/protocol/phttp"
 )
 
@@ -39,14 +41,26 @@ func (c *httpConverter) Proto() socket.L7Proto {
 	return socket.L7ProtoHTTP
 }
 
+func extractTraceID(req, rsp http.Header) pcommon.TraceID {
+	if traceID, ok := tracekit.TraceIDFromHTTPHeader(req); ok {
+		return traceID
+	}
+	if traceID, ok := tracekit.TraceIDFromHTTPHeader(rsp); ok {
+		return traceID
+	}
+	return tracekit.RandomTraceID()
+}
+
 func (c *httpConverter) Convert(rt socket.RoundTrip) ptrace.Span {
 	req := rt.Request().(*phttp.Request)
 	rsp := rt.Response().(*phttp.Response)
 
+	traceID := extractTraceID(req.Header, rsp.Header)
+
 	span := ptrace.NewSpan()
 	span.SetName(req.Method)
-	span.SetTraceID(randomTraceID())
-	span.SetSpanID(randomSpanID())
+	span.SetTraceID(traceID)
+	span.SetSpanID(tracekit.RandomSpanID())
 	span.SetStartTimestamp(pcommon.NewTimestampFromTime(req.Time))
 	span.SetEndTimestamp(pcommon.NewTimestampFromTime(rsp.Time))
 

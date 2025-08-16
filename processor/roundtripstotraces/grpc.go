@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
 	"github.com/packetd/packetd/common/socket"
+	"github.com/packetd/packetd/internal/tracekit"
 	"github.com/packetd/packetd/protocol/pgrpc"
 )
 
@@ -43,10 +44,12 @@ func (c *grpcConverter) Convert(rt socket.RoundTrip) ptrace.Span {
 	req := rt.Request().(*pgrpc.Request)
 	rsp := rt.Response().(*pgrpc.Response)
 
+	traceID := extractTraceID(req.Metadata, rsp.Metadata)
+
 	span := ptrace.NewSpan()
 	span.SetName(req.Service)
-	span.SetTraceID(randomTraceID())
-	span.SetSpanID(randomSpanID())
+	span.SetTraceID(traceID)
+	span.SetSpanID(tracekit.RandomSpanID())
 	span.SetStartTimestamp(pcommon.NewTimestampFromTime(req.Time))
 	span.SetEndTimestamp(pcommon.NewTimestampFromTime(rsp.Time))
 
