@@ -10,22 +10,23 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            goos: linux
-            goarch: amd64
-            cgo: 1
 #          - os: ubuntu-latest
 #            goos: linux
-#            goarch: arm64
+#            goarch: amd64
 #            cgo: 1
-          - os: macos-latest
-            goos: darwin
-            goarch: amd64
-            cgo: 1
-          - os: macos-latest
-            goos: darwin
+          - os: ubuntu-latest
+            goos: linux
             goarch: arm64
             cgo: 1
+            cc: aarch64-linux-gnu-gcc
+#          - os: macos-latest
+#            goos: darwin
+#            goarch: amd64
+#            cgo: 1
+#          - os: macos-latest
+#            goos: darwin
+#            goarch: arm64
+#            cgo: 1
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -44,9 +45,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libpcap-dev
+          
           # 安装 ARM64 交叉编译工具链
           if [ "${{ matrix.goarch }}" = "arm64" ]; then
-          sudo apt-get install -y gcc-aarch64-linux-gnu libpcap-dev:arm64
+            sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+            # 安装 ARM64 架构的 libpcap
+            sudo dpkg --add-architecture arm64
+            sudo apt-get update
+            sudo apt-get install -y libpcap-dev:arm64
           fi
 
       - name: Install system dependencies (macOS)
@@ -69,9 +75,17 @@ jobs:
           VERSION=$(cat VERSION)
           COMMIT=$(git rev-parse HEAD)
           BUILD_DATE=$(date -u '+%Y-%m-%d_%H:%M:%S')
-
+          
           output_name="packetd-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}"
-
+          
+          # 设置交叉编译环境变量
+          if [ "${{ matrix.goos }}" = "linux" ] && [ "${{ matrix.goarch }}" = "arm64" ]; then
+            export CC=aarch64-linux-gnu-gcc
+            export CXX=aarch64-linux-gnu-g++
+            export AR=aarch64-linux-gnu-ar
+            export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
+          fi
+          
           CGO_ENABLED=${{ matrix.cgo }} GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
             -ldflags="-s -w -X 'github.com/packetd/packetd/common.buildVersion=${VERSION}' -X 'github.com/packetd/packetd/common.buildTime=${BUILD_DATE}' -X 'github.com/packetd/packetd/common.buildHash=${COMMIT}'" \
             -o "${output_name}" .
