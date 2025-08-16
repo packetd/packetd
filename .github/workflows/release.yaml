@@ -50,7 +50,6 @@ jobs:
           if [ "${{ matrix.goarch }}" = "arm64" ]; then
             sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
             # 安装 ARM64 架构的 libpcap
-            sudo dpkg --add-architecture arm64
             sudo apt-get update
             sudo apt-get install -y libpcap-dev:arm64
           fi
