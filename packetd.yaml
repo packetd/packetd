@@ -128,7 +128,7 @@ exporter:
     interval: 15s
 
   roundtrips:
-    enabled: false
+    enabled: true
     console: true
     filename: "packetd.roundtrips"
     maxSize: 100

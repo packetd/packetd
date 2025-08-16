@@ -22,7 +22,6 @@ import (
 	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/common/socket"
 	"github.com/packetd/packetd/exporter"
-	"github.com/packetd/packetd/internal/json"
 )
 
 func init() {
@@ -30,9 +29,8 @@ func init() {
 }
 
 type Sinker struct {
-	wr      io.WriteCloser
-	encoder json.Encoder
-	cfg     *exporter.RoundTripsConfig
+	wc  io.WriteCloser
+	cfg *exporter.RoundTripsConfig
 }
 
 func New(conf exporter.Config) (exporter.Sinker, error) {
@@ -54,9 +52,8 @@ func New(conf exporter.Config) (exporter.Sinker, error) {
 	}
 
 	return &Sinker{
-		wr:      wr,
-		cfg:     cfg,
-		encoder: json.NewEncoder(wr),
+		wc:  wr,
+		cfg: cfg,
 	}, nil
 }
 
@@ -70,18 +67,16 @@ func (s *Sinker) Sink(data any) error {
 		return nil
 	}
 
-	type R struct {
-		Request  any
-		Response any
-		Duration string
+	b, err := socket.JSONMarshalRoundTrip(rt)
+	if err != nil {
+		return err
 	}
-	return s.encoder.Encode(R{
-		Request:  rt.Request(),
-		Response: rt.Response(),
-		Duration: rt.Duration().String(),
-	})
+
+	s.wc.Write(b)
+	s.wc.Write([]byte{'\n'})
+	return nil
 }
 
 func (s *Sinker) Close() {
-	s.wr.Close()
+	s.wc.Close()
 }

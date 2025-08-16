@@ -14,19 +14,13 @@
 package json
 
 import (
-	"io"
-
 	gojson "github.com/goccy/go-json"
 )
 
-type Encoder interface {
-	Encode(any) error
-}
-
-func NewEncoder(w io.Writer) Encoder {
-	return gojson.NewEncoder(w)
-}
-
 func Marshal(v interface{}) ([]byte, error) {
 	return gojson.Marshal(v)
+}
+
+func Unmarshal(data []byte, v interface{}) error {
+	return gojson.Unmarshal(data, v)
 }
