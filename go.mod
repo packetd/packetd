@@ -22,7 +22,6 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0
 	go.mongodb.org/mongo-driver v1.17.3
 	go.opentelemetry.io/collector/pdata v1.30.0
-	go.opentelemetry.io/otel v1.35.0
 	go.opentelemetry.io/otel/trace v1.35.0
 	go.uber.org/automaxprocs v1.6.0
 	go.uber.org/zap v1.27.0
@@ -50,6 +49,7 @@ require (
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/valyala/fasthttp v1.34.0 // indirect
 	github.com/valyala/fastrand v1.0.0 // indirect
+	go.opentelemetry.io/otel v1.35.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.35.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
