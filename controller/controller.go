@@ -16,12 +16,10 @@ package controller
 import (
 	"context"
 	"io"
-	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/packetd/packetd/common"
 	"github.com/packetd/packetd/common/socket"
@@ -30,7 +28,7 @@ import (
 	"github.com/packetd/packetd/exporter"
 	"github.com/packetd/packetd/internal/labels"
 	"github.com/packetd/packetd/internal/metricstorage"
-	"github.com/packetd/packetd/internal/sigs"
+	"github.com/packetd/packetd/internal/pubsub"
 	"github.com/packetd/packetd/internal/wait"
 	"github.com/packetd/packetd/logger"
 	"github.com/packetd/packetd/pipeline"
@@ -49,9 +47,11 @@ type Controller struct {
 	svr  *server.Server
 	snif sniffer.Sniffer
 
-	pps        *portPools
-	storage    *metricstorage.Storage
-	roundtrips chan socket.RoundTrip
+	pps     *portPools
+	storage *metricstorage.Storage
+
+	rtCh  chan socket.RoundTrip
+	rtBus *pubsub.PubSub
 }
 
 func setupLogger(conf *confengine.Config) error {
@@ -120,16 +120,17 @@ func New(conf *confengine.Config) (*Controller, error) {
 	roundtrips := make(chan socket.RoundTrip, common.Concurrency())
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Controller{
-		ctx:        ctx,
-		cancel:     cancel,
-		cfg:        cfg,
-		pl:         pl,
-		snif:       snif,
-		pps:        pps,
-		svr:        svr,
-		exp:        exp,
-		storage:    storage,
-		roundtrips: roundtrips,
+		ctx:     ctx,
+		cancel:  cancel,
+		cfg:     cfg,
+		pl:      pl,
+		snif:    snif,
+		pps:     pps,
+		svr:     svr,
+		exp:     exp,
+		storage: storage,
+		rtCh:    roundtrips,
+		rtBus:   pubsub.New(),
 	}, nil
 }
 
@@ -161,7 +162,7 @@ func (c *Controller) Start() error {
 			return
 		}
 
-		err := conn.OnL4Packet(pkt, c.roundtrips)
+		err := conn.OnL4Packet(pkt, c.rtCh)
 		if err == nil {
 			return
 		}
@@ -178,6 +179,27 @@ func (c *Controller) Start() error {
 	})
 
 	return nil
+}
+
+// Reload 重载配置
+//
+// - 重载 sniffer，仅支持重新编译 protocols rule
+func (c *Controller) Reload(conf *confengine.Config) error {
+	var cfg sniffer.Config
+	if err := conf.UnpackChild("sniffer", &cfg); err != nil {
+		return err
+	}
+
+	if err := c.snif.Reload(&cfg); err != nil {
+		return err
+	}
+	return c.pps.Reload(c.snif.L7Ports(), c.cfg.Decoder)
+}
+
+func (c *Controller) Stop() {
+	c.snif.Close()
+	c.exp.Close()
+	c.cancel()
 }
 
 func (c *Controller) removeExpiredConn() {
@@ -204,42 +226,6 @@ func (c *Controller) recordMetrics() {
 		snifferReceivedPackets.WithLabelValues(s.Name).Set(float64(s.Packets))
 		snifferDroppedPackets.WithLabelValues(s.Name).Set(float64(s.Drops))
 	}
-}
-
-func (c *Controller) setupServer() {
-	if c.svr == nil {
-		return
-	}
-
-	// Metric Routes
-	c.svr.RegisterGetRoute("/metrics", func(w http.ResponseWriter, r *http.Request) {
-		c.recordMetrics()
-		promhttp.Handler().ServeHTTP(w, r)
-	})
-	c.svr.RegisterGetRoute("/protocol/metrics", func(w http.ResponseWriter, r *http.Request) {
-		if c.storage == nil {
-			return
-		}
-		c.pps.RangePoolStats(func(stats connstream.TupleStats) {
-			c.updatePoolStats(stats)
-		})
-		c.updateActivePoolConns(c.pps.ActivePoolConns())
-		c.storage.WritePrometheus(w)
-	})
-
-	// Admin Routes
-	c.svr.RegisterPostRoute("/-/logger", func(w http.ResponseWriter, r *http.Request) {
-		level := r.FormValue("level")
-		logger.SetLoggerLevel(level)
-		w.Write([]byte(`{"status": "success"}`))
-	})
-	c.svr.RegisterPostRoute("/-/reload", func(w http.ResponseWriter, r *http.Request) {
-		if err := sigs.SelfReload(); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-			return
-		}
-	})
 }
 
 func (c *Controller) updatePoolStats(stats connstream.TupleStats) {
@@ -284,33 +270,13 @@ func (c *Controller) updateActivePoolConns(count map[socket.L4Proto]int) {
 	}
 }
 
-// Reload 重载配置
-//
-// - 重载 sniffer，仅支持重新编译 protocols rule
-func (c *Controller) Reload(conf *confengine.Config) error {
-	var cfg sniffer.Config
-	if err := conf.UnpackChild("sniffer", &cfg); err != nil {
-		return err
-	}
-
-	if err := c.snif.Reload(&cfg); err != nil {
-		return err
-	}
-	return c.pps.Reload(c.snif.L7Ports(), c.cfg.Decoder)
-}
-
-func (c *Controller) Stop() {
-	c.snif.Close()
-	c.exp.Close()
-	c.cancel()
-}
-
 func (c *Controller) consumeRoundTrip() {
 	for {
 		select {
-		case rt := <-c.roundtrips:
+		case rt := <-c.rtCh:
 			handledRoundtrips.Inc()
 			record := common.NewRecord(common.RecordRoundTrips, rt)
+			c.publish(record)
 			c.exp.Export(record)
 			c.pl.Range(record, func(dst *common.Record) {
 				c.exp.Export(dst)
@@ -319,5 +285,21 @@ func (c *Controller) consumeRoundTrip() {
 		case <-c.ctx.Done():
 			return
 		}
+	}
+}
+
+func (c *Controller) publish(record *common.Record) {
+	switch record.RecordType {
+	case common.RecordRoundTrips:
+		data, ok := record.Data.(socket.RoundTrip)
+		if !ok {
+			return
+		}
+
+		b, err := socket.JSONMarshalRoundTrip(data)
+		if err != nil {
+			return
+		}
+		c.rtBus.Publish(b)
 	}
 }

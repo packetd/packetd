@@ -9,6 +9,7 @@ require (
 	github.com/goccy/go-json v0.10.5
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/snappy v1.0.0
+	github.com/google/uuid v1.6.0
 	github.com/gopacket/gopacket v1.3.1
 	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/go-multierror v1.1.1
