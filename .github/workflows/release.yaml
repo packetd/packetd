@@ -42,25 +42,41 @@ jobs:
           COMMIT=$(git rev-parse HEAD)
           BUILD_DATE=$(date -u '+%Y-%m-%d_%I:%M:%S%p')
 
-          # Build for multiple platforms
-          platforms=(
+          # Build for Linux platforms (native compilation)
+          platforms_native=(
             "linux/amd64"
             "linux/arm64"
-            "darwin/amd64"   
-            "darwin/arm64"  
-            "windows/amd64"
-            "freebsd/amd64" 
           )
-          for platform in "${platforms[@]}"; do
+
+          for platform in "${platforms_native[@]}"; do
             GOOS=${platform%/*}
             GOARCH=${platform#*/}
-
             output_name="packetd-${VERSION}-${GOOS}-${GOARCH}"
-            if [ "$GOOS" = "windows" ]; then
-            output_name+=".exe"
-            fi
 
             echo "Building for $GOOS/$GOARCH..."
+            CGO_ENABLED=1 GOOS=$GOOS GOARCH=$GOARCH go build \
+              -ldflags="-s -w -X 'github.com/packetd/packetd/common.buildVersion=${VERSION}' -X 'github.com/packetd/packetd/common.buildTime=${BUILD_DATE}' -X 'github.com/packetd/packetd/common.buildHash=${COMMIT}'" \
+              -o "dist/${output_name}" .
+          done
+
+          # Build for other platforms without pcap (CGO disabled)
+          platforms_nocgo=(
+            "darwin/amd64"
+            "darwin/arm64"
+            "windows/amd64"
+            "freebsd/amd64"
+          )
+
+          for platform in "${platforms_nocgo[@]}"; do
+            GOOS=${platform%/*}
+            GOARCH=${platform#*/}
+            output_name="packetd-${VERSION}-${GOOS}-${GOARCH}"
+
+            if [ "$GOOS" = "windows" ]; then
+              output_name+=".exe"
+            fi
+
+            echo "Building for $GOOS/$GOARCH (without CGO)..."
             CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build \
               -ldflags="-s -w -X 'github.com/packetd/packetd/common.buildVersion=${VERSION}' -X 'github.com/packetd/packetd/common.buildTime=${BUILD_DATE}' -X 'github.com/packetd/packetd/common.buildHash=${COMMIT}'" \
               -o "dist/${output_name}" .
