@@ -53,21 +53,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
           
-          # 下载并编译 libpcap
-          wget https://github.com/the-tcpdump-group/libpcap/archive/refs/tags/libpcap-1.10.5.tar.gz
-          tar -xzf libpcap-1.10.5.tar.gz
-          cd libpcap-libpcap-1.10.5
+          # 下载并编译 libpcap（使用正确的 URL 和解压命令）
+          wget https://www.tcpdump.org/release/libpcap-1.10.5.tar.xz
+          tar -xf libpcap-1.10.5.tar.xz
+          cd libpcap-1.10.5
           
           # 交叉编译 libpcap
           CC=aarch64-linux-gnu-gcc \
           AR=aarch64-linux-gnu-ar \
           RANLIB=aarch64-linux-gnu-ranlib \
           ./configure \
-            --host=aarch64-linux-gnu \
-            --prefix=$PWD/../libpcap-arm64 \
-            --disable-shared \
-            --enable-static \
-            --without-libnl
+          --host=aarch64-linux-gnu \
+          --prefix=$PWD/../libpcap-arm64 \
+          --disable-shared \
+          --enable-static \
+          --without-libnl
           
           make
           make install
