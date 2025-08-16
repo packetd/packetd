@@ -17,7 +17,7 @@ jobs:
           - os: ubuntu-latest
             goos: linux
             goarch: arm64
-            cgo: 0
+            cgo: 1
           - os: macos-latest
             goos: darwin
             goarch: amd64
