@@ -21,7 +21,7 @@ controller:
 sniffer.ifaces: 'any'
 sniffer.engine: pcap
 sniffer.ipVersion: ''
-sniffer.blockNum: 128
+sniffer.blockNum: 64
 #sniffer.file: "/tmp/apm-worker.pcap"
 
 decoder.protocols:
@@ -102,9 +102,9 @@ processor:
 #    config:
 
 pipeline:
-#  - name: "traces/common"
-#    processors:
-#      - roundtripstotraces
+  - name: "traces/common"
+    processors:
+      - roundtripstotraces
 ##
   - name: "metrics/common"
     processors:

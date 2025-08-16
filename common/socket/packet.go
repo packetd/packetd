@@ -16,6 +16,8 @@ package socket
 import (
 	"fmt"
 	"time"
+
+	"github.com/packetd/packetd/internal/json"
 )
 
 // RoundTrip 代表了一次网络来回
@@ -36,6 +38,21 @@ type RoundTrip interface {
 
 	// Validate 校验请求是否正确
 	Validate() bool
+}
+
+func JSONMarshalRoundTrip(rt RoundTrip) ([]byte, error) {
+	type R struct {
+		Proto    L7Proto
+		Request  any
+		Response any
+		Duration string
+	}
+	return json.Marshal(R{
+		Proto:    rt.Proto(),
+		Request:  rt.Request(),
+		Response: rt.Response(),
+		Duration: rt.Duration().String(),
+	})
 }
 
 // L4Packet 表示 4 层网络数据包

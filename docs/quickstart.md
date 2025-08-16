@@ -239,6 +239,19 @@ http_request_duration_seconds_bucket{remote_host="httpbin.org",method="GET",path
 
 packetd 本身自监控指标可通过 `/metrics` 访问查看，[API 文档](./api.md)。
 
+在 agent 模式下，还可以通过其提供的请求 `watch` 路由实时观测 roundtrips 的情况，即作为一种临时 debug 工具，仅在需要使才输出 roundtrips，避免持续的文件输出造成资源开销。
+
+```shell
+$ curl http://localhost:9091/watch?max_message=5&timeout=10s
+```
+
+数据以 `JSONLINES` 格式数据，即每行均为 JSON 格式，换行符切割，有点类似于 SSE。
+
+```json
+{"Proto":"http","Request":{"Host":"192.168.1.3","Port":63456,"Method":"GET","Header":{"Accept":["*/*"],"User-Agent":["curl/8.7.1"]},"Proto":"HTTP/1.1","Path":"/get","URL":"/get","Scheme":"","RemoteHost":"httpbin.org","Close":false,"Size":0,"Chunked":false,"Time":"2025-08-16T15:08:59.452755+08:00"},"Response":{"Host":"54.144.158.62","Port":80,"Header":{"Access-Control-Allow-Credentials":["true"],"Access-Control-Allow-Origin":["*"],"Connection":["keep-alive"],"Content-Length":["253"],"Content-Type":["application/json"],"Date":["Sat, 16 Aug 2025 07:09:00 GMT"],"Server":["gunicorn/19.9.0"]},"Status":"200 OK","StatusCode":200,"Proto":"HTTP/1.1","Close":false,"Size":253,"Chunked":false,"Time":"2025-08-16T15:09:00.116628+08:00"},"Duration":"663.90175ms"}
+{"Proto":"http","Request":{"Host":"192.168.1.3","Port":63459,"Method":"GET","Header":{"Accept":["*/*"],"User-Agent":["curl/8.7.1"]},"Proto":"HTTP/1.1","Path":"/get","URL":"/get","Scheme":"","RemoteHost":"httpbin.org","Close":false,"Size":0,"Chunked":false,"Time":"2025-08-16T15:09:01.450079+08:00"},"Response":{"Host":"54.144.158.62","Port":80,"Header":{"Access-Control-Allow-Credentials":["true"],"Access-Control-Allow-Origin":["*"],"Connection":["keep-alive"],"Content-Length":["253"],"Content-Type":["application/json"],"Date":["Sat, 16 Aug 2025 07:09:02 GMT"],"Server":["gunicorn/19.9.0"]},"Status":"200 OK","StatusCode":200,"Proto":"HTTP/1.1","Close":false,"Size":253,"Chunked":false,"Time":"2025-08-16T15:09:01.878432+08:00"},"Duration":"428.37175ms"}
+```
+
 ## 配置热重载
 
 packetd 支持运行时热重载 Protocol Rules（仅 agent 模式下生效），有两种方式触发重载：

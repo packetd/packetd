@@ -14,7 +14,9 @@
 
 packetd 支持从数据流中解析出多种应用协议（HTTP/gRPC/MySQL/Redis/Kafka/...），使用请求的来回 **roundtrip** 作为其核心概念，进而衍生出 traces/metrics/roundtrips 数据。
 
-由于缺乏上下文关联，traces 仅能代表当次网络情况的情况，无法关联应用层的 span，更像是一种 event/log 类型的数据，只不过以 traces 的形式组织起来。
+在 HTTP/HTTP2/gPRC 协议中，协议头部信息可以携带 `traceparent` 信息，packetd 会继承其 traceID。
+
+对于无法关联 traceID 的请求，由于缺乏上下文信息，traces 仅能代表当次网络情况的情况，无法关联应用层的 span，更像是一种 event/log 类型的数据，只不过以 traces 的形式组织起来。
 
 packetd 提供了更加现代化的可观测手段，可以无缝地对接现有的观测体系：
 

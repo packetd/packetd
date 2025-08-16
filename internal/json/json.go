@@ -26,3 +26,7 @@ type Encoder interface {
 func NewEncoder(w io.Writer) Encoder {
 	return gojson.NewEncoder(w)
 }
+
+func Marshal(v interface{}) ([]byte, error) {
+	return gojson.Marshal(v)
+}

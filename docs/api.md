@@ -6,6 +6,9 @@
 
 * GET /metrics: prometheus 自监控指标上报
 * GET /protocol/metrics: 协议监控指标上报
+* GET /watch?max_message=5&timeout=10s: 实时观测 roundtrips
+   - max_message: 最大消息数
+   - timeout: 超时时间
 
 ### 管理路由
 
