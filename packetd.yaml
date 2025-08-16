@@ -18,9 +18,9 @@ controller:
 #      - "destination.host"
 #      - "destination.port"
 
-sniffer.ifaces: 'lo'
+sniffer.ifaces: 'any'
 sniffer.engine: pcap
-sniffer.ipVersion: v6
+sniffer.ipVersion: ''
 sniffer.blockNum: 128
 #sniffer.file: "/tmp/apm-worker.pcap"
 
@@ -34,9 +34,9 @@ sniffer.protocols:
 #      protocol: "redis"
 #      ports: [6379]
 #
-#    - name: "http"
-#      protocol: "http"
-#      ports: [8083]
+    - name: "http"
+      protocol: "http"
+      ports: [80]
 
 #    - name: "mysql"
 #      protocol: "mysql"
@@ -105,7 +105,7 @@ pipeline:
 #  - name: "traces/common"
 #    processors:
 #      - roundtripstotraces
-#
+##
   - name: "metrics/common"
     processors:
       - roundtripstometrics
