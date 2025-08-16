@@ -45,14 +45,36 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libpcap-dev
+
+      - name: Build libpcap for ARM64
+        if: matrix.goos == 'linux' && matrix.goarch == 'arm64'
+        run: |
+          # 安装交叉编译工具
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
           
-          # 安装 ARM64 交叉编译工具链
-          if [ "${{ matrix.goarch }}" = "arm64" ]; then
-            sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-            # 安装 ARM64 架构的 libpcap
-            sudo apt-get update
-            sudo apt-get install -y libpcap-dev
-          fi
+          # 下载并编译 libpcap
+          wget https://github.com/the-tcpdump-group/libpcap/archive/refs/tags/libpcap-1.10.5.tar.gz
+          tar -xzf libpcap-1.10.5.tar.gz
+          cd libpcap-libpcap-1.10.5
+          
+          # 交叉编译 libpcap
+          CC=aarch64-linux-gnu-gcc \
+          AR=aarch64-linux-gnu-ar \
+          RANLIB=aarch64-linux-gnu-ranlib \
+          ./configure \
+            --host=aarch64-linux-gnu \
+            --prefix=$PWD/../libpcap-arm64 \
+            --disable-shared \
+            --enable-static \
+            --without-libnl
+          
+          make
+          make install
+          
+          # 设置环境变量
+          echo "PCAP_PATH=$PWD/../libpcap-arm64" >> $GITHUB_ENV
+          cd ..
 
       - name: Install system dependencies (macOS)
         if: runner.os == 'macOS'
@@ -81,8 +103,8 @@ jobs:
           if [ "${{ matrix.goos }}" = "linux" ] && [ "${{ matrix.goarch }}" = "arm64" ]; then
             export CC=aarch64-linux-gnu-gcc
             export CXX=aarch64-linux-gnu-g++
-            export AR=aarch64-linux-gnu-ar
-            export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
+            export CGO_CFLAGS="-I${PCAP_PATH}/include"
+            export CGO_LDFLAGS="-L${PCAP_PATH}/lib -lpcap"
           fi
           
           CGO_ENABLED=${{ matrix.cgo }} GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
