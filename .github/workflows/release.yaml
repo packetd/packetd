@@ -11,27 +11,22 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            arch: amd64
             goos: linux
             goarch: amd64
             cgo: 1
           - os: ubuntu-latest
-            arch: arm64
             goos: linux
             goarch: arm64
-            cgo: 0  # 暂时禁用，避免交叉编译问题
+            cgo: 0
           - os: ubuntu-latest
-            arch: amd64
             goos: darwin
             goarch: amd64
             cgo: 0
           - os: ubuntu-latest
-            arch: amd64
             goos: darwin
             goarch: arm64
             cgo: 0
           - os: ubuntu-latest
-            arch: amd64
             goos: windows
             goarch: amd64
             cgo: 0
@@ -69,7 +64,7 @@ jobs:
           VERSION=$(cat VERSION)
           COMMIT=$(git rev-parse HEAD)
           BUILD_DATE=$(date -u '+%Y-%m-%d_%H:%M:%S')
-          
+
           output_name="packetd-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}"
           if [ "${{ matrix.goos }}" = "windows" ]; then
             output_name+=".exe"
@@ -80,19 +75,20 @@ jobs:
             -o "${output_name}" .
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: binaries
-          path: packetd-*
+          name: binary-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: packetd-*-${{ matrix.goos }}-${{ matrix.goarch }}*
 
   release:
     needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: binaries
+          pattern: binary-*
+          merge-multiple: true
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
