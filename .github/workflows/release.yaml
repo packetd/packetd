@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.0'
+
+      - name: Install dependencies
+        run: make mod
+
+      - name: Install build tools
+        run: make tools
+
+      - name: Run tests
+        run: make test
+
+      - name: Create dist directory
+        run: mkdir -p dist
+
+      - name: Build cross-platform binaries
+        run: |
+          VERSION=$(cat VERSION)
+          COMMIT=$(git rev-parse HEAD)
+          BUILD_DATE=$(date -u '+%Y-%m-%d_%I:%M:%S%p')
+
+          # Build for multiple platforms
+          platforms=(
+            "linux/amd64"
+            "linux/arm64"
+            "darwin/amd64"   
+            "darwin/arm64"  
+            "windows/amd64"
+            "freebsd/amd64" 
+          )
+          for platform in "${platforms[@]}"; do
+            GOOS=${platform%/*}
+            GOARCH=${platform#*/}
+
+            output_name="packetd-${VERSION}-${GOOS}-${GOARCH}"
+            if [ "$GOOS" = "windows" ]; then
+            output_name+=".exe"
+            fi
+
+            echo "Building for $GOOS/$GOARCH..."
+            CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build \
+              -ldflags="-s -w -X 'github.com/packetd/packetd/common.buildVersion=${VERSION}' -X 'github.com/packetd/packetd/common.buildTime=${BUILD_DATE}' -X 'github.com/packetd/packetd/common.buildHash=${COMMIT}'" \
+              -o "dist/${output_name}" .
+          done
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/packetd-linux-amd64
+            dist/packetd-linux-arm64
+            dist/packetd-windows-amd64.exe
+            dist/packetd-darwin-amd64
+            dist/packetd-darwin-arm64
+            dist/packetd-freebsd-amd64
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
