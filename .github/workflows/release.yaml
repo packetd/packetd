@@ -1,0 +1,141 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            cgo: 1
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            cgo: 1
+            cc: aarch64-linux-gnu-gcc
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            cgo: 1
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            cgo: 1
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.0'
+
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpcap-dev
+      - name: Build libpcap for ARM64
+        if: matrix.goos == 'linux' && matrix.goarch == 'arm64'
+        run: |
+          # 安装交叉编译工具
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          
+          # 下载并编译 libpcap
+          wget https://www.tcpdump.org/release/libpcap-1.10.5.tar.xz
+          tar -xf libpcap-1.10.5.tar.xz
+          cd libpcap-1.10.5
+          
+          # 交叉编译 libpcap
+          CC=aarch64-linux-gnu-gcc \
+          AR=aarch64-linux-gnu-ar \
+          RANLIB=aarch64-linux-gnu-ranlib \
+          ./configure \
+          --host=aarch64-linux-gnu \
+          --prefix=$PWD/../libpcap-arm64 \
+          --disable-shared \
+          --enable-static \
+          --without-libnl
+          
+          make
+          make install
+          
+          # 设置环境变量
+          echo "PCAP_PATH=$PWD/../libpcap-arm64" >> $GITHUB_ENV
+          cd ..
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install libpcap
+      - name: Install dependencies
+        run: make mod
+
+      - name: Install build tools
+        run: make tools
+
+      - name: Run tests
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        run: make test
+
+      - name: Build binary
+        run: |
+          VERSION=$(cat VERSION)
+          COMMIT=$(git rev-parse HEAD)
+          BUILD_DATE=$(date -u '+%Y-%m-%d_%H:%M:%S')
+          
+          # 设置交叉编译环境变量
+          if [ "${{ matrix.goos }}" = "linux" ] && [ "${{ matrix.goarch }}" = "arm64" ]; then
+            export CC=aarch64-linux-gnu-gcc
+            export CXX=aarch64-linux-gnu-g++
+            export CGO_CFLAGS="-I${PCAP_PATH}/include"
+            export CGO_LDFLAGS="-L${PCAP_PATH}/lib -lpcap"
+          fi
+          
+          # 构建二进制文件，输出名称为 packetd
+          CGO_ENABLED=${{ matrix.cgo }} GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
+            -ldflags="-s -w -X 'github.com/packetd/packetd/common.buildVersion=${VERSION}' -X 'github.com/packetd/packetd/common.buildTime=${BUILD_DATE}' -X 'github.com/packetd/packetd/common.buildHash=${COMMIT}'" \
+            -o packetd .
+      - name: Create archive
+        run: |
+          VERSION=$(cat VERSION)
+          archive_name="packetd-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          
+          # Linux 和 macOS 使用 tar.gz
+          tar -czf "${archive_name}.tar.gz" packetd
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: archive-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: packetd-*.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: archive-*
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            packetd-*.tar.gz
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
