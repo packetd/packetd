@@ -44,11 +44,12 @@ func (c *grpcConverter) Convert(rt socket.RoundTrip) ptrace.Span {
 	req := rt.Request().(*pgrpc.Request)
 	rsp := rt.Response().(*pgrpc.Response)
 
-	traceID := extractTraceID(req.Metadata, rsp.Metadata)
+	tc := extractTraceContext(req.Metadata, rsp.Metadata)
 
 	span := ptrace.NewSpan()
 	span.SetName(req.Service)
-	span.SetTraceID(traceID)
+	span.SetTraceID(tc.TraceID)
+	span.SetParentSpanID(tc.SpanID)
 	span.SetSpanID(tracekit.RandomSpanID())
 	span.SetStartTimestamp(pcommon.NewTimestampFromTime(req.Time))
 	span.SetEndTimestamp(pcommon.NewTimestampFromTime(rsp.Time))

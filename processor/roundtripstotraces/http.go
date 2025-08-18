@@ -41,25 +41,26 @@ func (c *httpConverter) Proto() socket.L7Proto {
 	return socket.L7ProtoHTTP
 }
 
-func extractTraceID(req, rsp http.Header) pcommon.TraceID {
-	if traceID, ok := tracekit.TraceIDFromHTTPHeader(req); ok {
-		return traceID
+func extractTraceContext(req, rsp http.Header) tracekit.TraceContext {
+	if tc, ok := tracekit.TraceIDFromHTTPHeader(req); ok {
+		return tc
 	}
-	if traceID, ok := tracekit.TraceIDFromHTTPHeader(rsp); ok {
-		return traceID
+	if tc, ok := tracekit.TraceIDFromHTTPHeader(rsp); ok {
+		return tc
 	}
-	return tracekit.RandomTraceID()
+	return tracekit.RandomTraceContext()
 }
 
 func (c *httpConverter) Convert(rt socket.RoundTrip) ptrace.Span {
 	req := rt.Request().(*phttp.Request)
 	rsp := rt.Response().(*phttp.Response)
 
-	traceID := extractTraceID(req.Header, rsp.Header)
+	tc := extractTraceContext(req.Header, rsp.Header)
 
 	span := ptrace.NewSpan()
 	span.SetName(req.Method)
-	span.SetTraceID(traceID)
+	span.SetTraceID(tc.TraceID)
+	span.SetParentSpanID(tc.SpanID)
 	span.SetSpanID(tracekit.RandomSpanID())
 	span.SetStartTimestamp(pcommon.NewTimestampFromTime(req.Time))
 	span.SetEndTimestamp(pcommon.NewTimestampFromTime(rsp.Time))
