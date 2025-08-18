@@ -18,26 +18,39 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestTraceIDFromHTTPHeader(t *testing.T) {
+	genTc := func(traceID, spanID string) TraceContext {
+		tid, _ := trace.TraceIDFromHex(traceID)
+		sid, _ := trace.SpanIDFromHex(spanID)
+		return TraceContext{
+			TraceID: pcommon.TraceID(tid),
+			SpanID:  pcommon.SpanID(sid),
+		}
+	}
+
 	tests := []struct {
 		name        string
 		traceParent string
-		traceID     string
+		tc          TraceContext
 	}{
 		{
 			name:        "valid",
 			traceParent: "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
-			traceID:     "0af7651916cd43dd8448eb211c80319c",
+			tc:          genTc("0af7651916cd43dd8448eb211c80319c", "b7ad6b7169203331"),
 		},
 		{
 			name:        "invalid traceid",
 			traceParent: "00-0af7651916cd43dd8448eb211c80319!-b7ad6b7169203331-01",
+			tc:          TraceContext{},
 		},
 		{
 			name:        "invalid version",
 			traceParent: "02-0af7651916cd43dd8448eb211c80319!-b7ad6b7169203331-01",
+			tc:          TraceContext{},
 		},
 	}
 
@@ -47,7 +60,7 @@ func TestTraceIDFromHTTPHeader(t *testing.T) {
 			header.Set(headerTraceParent, tt.traceParent)
 
 			got, _ := TraceIDFromHTTPHeader(header)
-			assert.Equal(t, tt.traceID, got.String())
+			assert.Equal(t, tt.tc, got)
 		})
 	}
 }

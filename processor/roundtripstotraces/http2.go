@@ -44,11 +44,12 @@ func (c *http2Converter) Convert(rt socket.RoundTrip) ptrace.Span {
 	req := rt.Request().(*phttp2.Request)
 	rsp := rt.Response().(*phttp2.Response)
 
-	traceID := extractTraceID(req.Header, rsp.Header)
+	tc := extractTraceContext(req.Header, rsp.Header)
 
 	span := ptrace.NewSpan()
 	span.SetName(req.Method)
-	span.SetTraceID(traceID)
+	span.SetTraceID(tc.TraceID)
+	span.SetParentSpanID(tc.SpanID)
 	span.SetSpanID(tracekit.RandomSpanID())
 	span.SetStartTimestamp(pcommon.NewTimestampFromTime(req.Time))
 	span.SetEndTimestamp(pcommon.NewTimestampFromTime(rsp.Time))

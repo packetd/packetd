@@ -26,12 +26,17 @@ const (
 	headerTraceParent = "traceparent"
 )
 
+type TraceContext struct {
+	TraceID pcommon.TraceID
+	SpanID  pcommon.SpanID
+}
+
 // TraceIDFromHTTPHeader 从 HTTP header 中提取 TraceID
 //
 // 格式样例
 // traceparent: 00-{trace-id}-{parent-id}-{trace-flags}
-func TraceIDFromHTTPHeader(h http.Header) (pcommon.TraceID, bool) {
-	var empty pcommon.TraceID
+func TraceIDFromHTTPHeader(h http.Header) (TraceContext, bool) {
+	var empty TraceContext
 	s := h.Get(headerTraceParent)
 	if s == "" {
 		return empty, false
@@ -51,7 +56,15 @@ func TraceIDFromHTTPHeader(h http.Header) (pcommon.TraceID, bool) {
 	if err != nil {
 		return empty, false
 	}
-	return pcommon.TraceID(traceID), true
+	spanID, err := trace.SpanIDFromHex(parts[2])
+	if err != nil {
+		return empty, false
+	}
+
+	return TraceContext{
+		TraceID: pcommon.TraceID(traceID),
+		SpanID:  pcommon.SpanID(spanID),
+	}, true
 }
 
 // RandomTraceID 随机生成 TraceID
@@ -76,4 +89,12 @@ func RandomSpanID() pcommon.SpanID {
 		ret[i] = b[i]
 	}
 	return ret
+}
+
+// RandomTraceContext 随机生成 TraceContext
+func RandomTraceContext() TraceContext {
+	return TraceContext{
+		TraceID: RandomTraceID(),
+		SpanID:  RandomSpanID(),
+	}
 }
