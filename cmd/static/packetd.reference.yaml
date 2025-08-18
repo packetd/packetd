@@ -135,11 +135,6 @@ controller.decoder:
 
 # ========== metricsStorage configuration ==========
 #
-# Default: false
-# enabled 是否启用指标存储
-# [Note]: /metrics 上报以及 roundtripstometrics 均需要用到
-metricsStorage.enabled:
-
 # Default: 5m
 # expired 指标存储过期时间
 metricsStorage.expired: 5m
@@ -260,7 +255,6 @@ pipeline:
 
   - name: "metrics/common"
     processors:
-      # [Note]: 如果启用必须保证 metricsStorage.enabled 为 true
       - roundtripstometrics
 
 
@@ -292,7 +286,6 @@ exporter.traces:
 exporter.metrics:
   # Default: false
   # enabled 是否启用 metrics 上报
-  # [Note]: 如果启用必须保证 metricsStorage.enabled 为 true
   enabled: false
 
   # Default: ''

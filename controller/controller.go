@@ -47,8 +47,8 @@ type Controller struct {
 	svr  *server.Server
 	snif sniffer.Sniffer
 
-	pps     *portPools
-	storage *metricstorage.Storage
+	pps            *portPools
+	metricsStorage *metricstorage.Storage
 
 	rtCh  chan socket.RoundTrip
 	rtBus *pubsub.PubSub
@@ -92,12 +92,12 @@ func New(conf *confengine.Config) (*Controller, error) {
 		return nil, err
 	}
 
-	storage, err := metricstorage.New(conf)
+	metricsStorage, err := metricstorage.New(conf)
 	if err != nil {
 		return nil, err
 	}
 
-	exp, err := exporter.New(conf, storage)
+	exp, err := exporter.New(conf, metricsStorage)
 	if err != nil {
 		return nil, err
 	}
@@ -117,20 +117,20 @@ func New(conf *confengine.Config) (*Controller, error) {
 		return nil, err
 	}
 
-	roundtrips := make(chan socket.RoundTrip, common.Concurrency())
+	rtCh := make(chan socket.RoundTrip, common.Concurrency())
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Controller{
-		ctx:     ctx,
-		cancel:  cancel,
-		cfg:     cfg,
-		pl:      pl,
-		snif:    snif,
-		pps:     pps,
-		svr:     svr,
-		exp:     exp,
-		storage: storage,
-		rtCh:    roundtrips,
-		rtBus:   pubsub.New(),
+		ctx:            ctx,
+		cancel:         cancel,
+		cfg:            cfg,
+		pl:             pl,
+		snif:           snif,
+		pps:            pps,
+		svr:            svr,
+		exp:            exp,
+		metricsStorage: metricsStorage,
+		rtCh:           rtCh,
+		rtBus:          pubsub.New(),
 	}, nil
 }
 
@@ -250,14 +250,14 @@ func (c *Controller) updatePoolStats(stats connstream.TupleStats) {
 	ss := stats.Stats
 	switch ss.Proto {
 	case socket.L4ProtoTCP:
-		c.storage.Update(
+		c.metricsStorage.Update(
 			metricstorage.NewCounterConstMetric("tcp_received_packets_total", float64(ss.ReceivedPackets), lbs),
 			metricstorage.NewCounterConstMetric("tcp_received_bytes_total", float64(ss.ReceivedBytes), lbs),
 			metricstorage.NewCounterConstMetric("tcp_skipped_packets_total", float64(ss.SkippedPackets), lbs),
 		)
 
 	case socket.L4ProtoUDP:
-		c.storage.Update(
+		c.metricsStorage.Update(
 			metricstorage.NewCounterConstMetric("udp_received_packets_total", float64(ss.ReceivedPackets), lbs),
 			metricstorage.NewCounterConstMetric("udp_received_bytes_total", float64(ss.ReceivedBytes), lbs),
 		)
@@ -266,7 +266,7 @@ func (c *Controller) updatePoolStats(stats connstream.TupleStats) {
 
 func (c *Controller) updateActivePoolConns(count map[socket.L4Proto]int) {
 	for k, v := range count {
-		c.storage.Update(metricstorage.NewGaugeConstMetric(string(k)+"_active_conns", float64(v), nil))
+		c.metricsStorage.Update(metricstorage.NewGaugeConstMetric(string(k)+"_active_conns", float64(v), nil))
 	}
 }
 

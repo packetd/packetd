@@ -23,7 +23,6 @@ import (
 )
 
 type Config struct {
-	Enabled     bool          `config:"enabled"`
 	Expired     time.Duration `config:"expired"`
 	VmHistogram bool          `config:"vmHistogram"`
 }
@@ -35,15 +34,10 @@ type Storage struct {
 }
 
 // New 创建并返回 Storage 实例
-//
-// 当 .Enabled 为 false 时会返回空指针 调用方需先判断
 func New(conf *confengine.Config) (*Storage, error) {
 	var config Config
 	if err := conf.UnpackChild("metricsStorage", &config); err != nil {
 		return nil, err
-	}
-	if !config.Enabled {
-		return nil, nil
 	}
 
 	if config.Expired <= 0 {

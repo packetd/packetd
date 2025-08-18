@@ -48,14 +48,11 @@ func (c *Controller) routeMetrics(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) routeProtoMetrics(w http.ResponseWriter, r *http.Request) {
-	if c.storage == nil {
-		return
-	}
 	c.pps.RangePoolStats(func(stats connstream.TupleStats) {
 		c.updatePoolStats(stats)
 	})
 	c.updateActivePoolConns(c.pps.ActivePoolConns())
-	c.storage.WritePrometheus(w)
+	c.metricsStorage.WritePrometheus(w)
 }
 
 func (c *Controller) routeLogger(w http.ResponseWriter, r *http.Request) {
