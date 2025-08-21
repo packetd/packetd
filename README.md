@@ -26,8 +26,6 @@ packetd 提供了更加现代化的可观测手段，可以无缝地对接现有
 
 ## 🔰 Installation
 
-### Dependencies
-
 packetd 使用 `libpcap` 作为其底层监听网络包监听方案，因此先安装该依赖库（大部分操作系统已内置）。
 
 *Debian/Ubuntu*
@@ -46,7 +44,7 @@ $ sudo yum install libpcap libpcap-devel
 
 Windows 系统需要先安装 [npcap](https://nmap.org/npcap/)。
 
-### Build from binary
+### Install from sourcecode
 
 使用 `go install` 安装二进制文件。
 
@@ -54,9 +52,7 @@ Windows 系统需要先安装 [npcap](https://nmap.org/npcap/)。
 $ go install github.com/packetd/packetd@latest
 ```
 
-### Build from sourceCode
-
-使用源码构建。
+### Build from sourcecode
 
 ```shell
 $ git clone https://github.com/packetd/packetd.git
@@ -64,14 +60,48 @@ $ make build
 # $ mv packetd /usr/local/bin
 ```
 
-### Run with Docker
+### Download binary
+
+```shell
+# https://github.com/packetd/packetd/releases
+
+# 从 release 上选择最新的版本 比如
+$ wget https://github.com/packetd/packetd/releases/download/v0.0.3/packetd-v0.0.3-linux-amd64.tar.gz
+```
+
+### Run in Docker
 
 ```shell
 # 使用 host network 可以观察主机网络情况
-$ docker run --network host packetd/packetd:v0.0.1 watch --proto 'http;80' --ifaces any --console
+$ docker run --network host packetd/packetd watch --proto 'http;80' --ifaces any --console
 
 # 或者将本地配置文件挂载到容器内
-$ docker run --network host -v /my/packetd.yaml:/packetd.yaml packetd/packetd:v0.0.1 agent --config /packetd.yaml 
+$ docker run --network host -v /my/packetd.yaml:/packetd.yaml packetd/packetd agent --config /packetd.yaml 
+```
+
+### Run in Kubernetes
+
+示例部署文件 [deploy.yaml](./docs/fixture/deploy.yaml)，可自行调整其 ConfigMap 内容。
+
+```shell
+$ kubectl create ns packetd
+$ kubectl apply -f deploy.yaml
+
+# 此操作会部署 Daemonset / ConfigMap / Service / ServiceMonitor 多种资源
+$ kubectl get -n packetd ds,cm,service,servicemonitor
+NAME                     DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
+daemonset.apps/packetd   5         5         5       5            5           <none>          9h
+
+NAME                           DATA   AGE
+configmap/istio-ca-root-cert   1      9h
+configmap/kube-root-ca.crt     1      9h
+configmap/packetd              1      9h
+
+NAME              TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+service/packetd   ClusterIP   ....             <none>        9091/TCP   9h
+
+NAME                                           AGE
+servicemonitor.monitoring.coreos.com/packetd   9h
 ```
 
 ## 🚀 Quickstart
@@ -131,6 +161,12 @@ packetd 遵循了 Prometheus 以及 OpenTelemetry 社区的 metrics/traces 设�
 * [可观测数据](./docs/observability.md)
 * [API](./docs/api.md)
 * [性能压测](./docs/performance.md)
+
+## 🚦 Roadmap
+
+- 支更多协议主流协议。
+- 支持采样处理器，维度清洗处理器等。
+- 构建 Kubernetes Operator，实现 Service 端口协议自发现以及 Workload 信息标签关联。
 
 ## 🤔 FQA
 

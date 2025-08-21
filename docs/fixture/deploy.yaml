@@ -1,0 +1,147 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app.kubernetes.io/component: packetd
+  name: packetd
+  namespace: packetd
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: packetd
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: packetd
+    spec:
+      containers:
+        - name: packetd
+          image: packetd/packetd:v0.0.3
+          imagePullPolicy: IfNotPresent
+          args:
+            - /usr/local/bin/packetd agent --config /etc/packetd/packetd.yaml
+          command:
+            - /bin/sh
+            - -c
+            - --
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            - mountPath: /etc/packetd
+              name: packetd
+              readOnly: true
+      hostNetwork: true
+      tolerations:
+        - operator: Exists
+      volumes:
+        - configMap:
+            defaultMode: 420
+            name: packetd
+          name: packetd
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 25%
+    type: RollingUpdate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: packetd
+  name: packetd
+  namespace: packetd
+spec:
+  ports:
+    - name: http
+      port: 9091
+      protocol: TCP
+      targetPort: 9091
+  selector:
+    app.kubernetes.io/component: packetd
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app.kubernetes.io/component: packetd
+  name: packetd
+  namespace: packetd
+spec:
+  endpoints:
+    - path: /protocol/metrics
+      port: http
+    - path: /metrics
+      port: http
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: packetd
+---
+apiVersion: v1
+data:
+  packetd.yaml: |
+    server:
+      enabled: true
+      address: ":9091"
+      timeout: 1m
+      pprof: true
+
+    logger:
+      level: "info"
+      stdout: true
+
+    controller:
+      layer4Metrics:
+        enabled: true
+        requiredLabels:
+
+    sniffer.ifaces: 'any'
+    sniffer.engine: pcap
+    sniffer.ipVersion: ''
+    sniffer.blockNum: 32
+
+    decoder.protocols:
+    sniffer.protocols:
+      rules:
+        - name: "http"
+          protocol: "http"
+          ports: [8080]
+
+    processor:
+      - name: roundtripstometrics
+        config:
+          http:
+            requireLabels:
+              - "server.address"
+              - "server.port"
+              - "client.address"
+              - "request.method"
+              - "request.path"
+              - "response.status_code"
+
+    pipeline:
+      - name: "metrics/common"
+        processors:
+          - roundtripstometrics
+
+    metricsStorage:
+      enabled: true
+      expired: 5m
+      vmHistogram: true
+
+    exporter:
+      roundtrips:
+        enabled: true
+        console: true
+
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/component: packetd
+  name: packetd
+  namespace: packetd
