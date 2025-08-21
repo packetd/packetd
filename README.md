@@ -166,7 +166,9 @@ packetd 遵循了 Prometheus 以及 OpenTelemetry 社区的 metrics/traces 设�
 
 - 支更多协议主流协议。
 - 支持采样处理器，维度清洗处理器等。
+- 提供 helm-charts 部署模式。
 - 构建 Kubernetes Operator，实现 Service 端口协议自发现以及 Workload 信息标签关联。
+- 构建 mcp 工具，支持对网络流量进行智能分析？
 
 ## 🤔 FQA
 
