@@ -31,13 +31,13 @@ packetd 使用 `libpcap` 作为其底层监听网络包监听方案，因此先�
 *Debian/Ubuntu*
 
 ```shell
-$ sudo apt-get install libpcap-dev
+$ sudo apt-get install libpcap-dev make gcc
 ```
 
 *CentOS/Fedora*
 
 ```shell
-$ sudo yum install libpcap libpcap-devel
+$ sudo yum install libpcap libpcap-devel make gcc
 ```
 
 *Windows*
