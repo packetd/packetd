@@ -15,7 +15,6 @@ package cmd
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"os"
@@ -102,7 +101,10 @@ sniffer:
 {{ range .Protos }}
     - name: {{ .Name }}
       protocol: {{ .Protocol }}
-      ports: {{ .Ports | toJSON }}
+      ports:
+{{- range .Ports }}
+        - {{ . }}	
+{{- end }}
       host: {{ .Host }}
 {{ end }}
 
@@ -118,14 +120,7 @@ exporter:
     maxAge: 7
 `
 
-	funcMap := template.FuncMap{
-		"toJSON": func(v interface{}) string {
-			b, _ := json.Marshal(v)
-			return string(b)
-		},
-	}
-
-	tpl, err := template.New("Config").Funcs(funcMap).Parse(text)
+	tpl, err := template.New("Config").Parse(text)
 	if err != nil {
 		return nil
 	}
