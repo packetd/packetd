@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"os"
@@ -52,6 +53,7 @@ func (c *watchCmdConfig) decodeProtoConfig() []protoConfig {
 	for idx, proto := range c.Protocols {
 		parts := strings.Split(proto, ";")
 		if len(parts) < 2 {
+			fmt.Fprintf(os.Stderr, "warning: Invalid protocol format '%s', expected 'protocol;ports[;host]' (e.g., 'http;80,8080;127.0.0.1'), skipping\n", proto)
 			continue
 		}
 
@@ -59,6 +61,11 @@ func (c *watchCmdConfig) decodeProtoConfig() []protoConfig {
 		for _, port := range strings.Split(parts[1], ",") {
 			i, err := strconv.Atoi(port)
 			if err != nil {
+				fmt.Fprintf(os.Stderr, "warning: Invalid port '%s' in protocol '%s', port must be an integer, skipping this port\n", port, proto)
+				continue
+			}
+			if i < 1 || i > 65535 {
+				fmt.Fprintf(os.Stderr, "warning: Port '%d' in protocol '%s' is out of range (1-65535), skipping this port\n", i, proto)
 				continue
 			}
 			pc.Ports = append(pc.Ports, i)
@@ -95,7 +102,7 @@ sniffer:
 {{ range .Protos }}
     - name: {{ .Name }}
       protocol: {{ .Protocol }}
-      ports: {{ .Ports }}
+      ports: {{ .Ports | toJSON }}
       host: {{ .Host }}
 {{ end }}
 
@@ -110,8 +117,22 @@ exporter:
     maxBackups: {{ .RoundtripBackups }}
     maxAge: 7
 `
-	tpl, err := template.New("Config").Parse(text)
+
+	funcMap := template.FuncMap{
+		"toJSON": func(v interface{}) string {
+			b, _ := json.Marshal(v)
+			return string(b)
+		},
+	}
+
+	tpl, err := template.New("Config").Funcs(funcMap).Parse(text)
 	if err != nil {
+		return nil
+	}
+
+	ports := c.decodeProtoConfig()
+	if len(ports) == 0 {
+		fmt.Fprintf(os.Stderr, "error: no protocols specified, please use --proto to add protocols\n")
 		return nil
 	}
 
@@ -122,7 +143,7 @@ exporter:
 		"Ifaces":           c.Ifaces,
 		"IPVersion":        c.IPVersion,
 		"NoPromisc":        c.NoPromisc,
-		"Protos":           c.decodeProtoConfig(),
+		"Protos":           ports,
 		"RoundtripFile":    c.RoundtripFile,
 		"RoundtripSize":    c.RoundtripSize,
 		"RoundtripBackups": c.RoundtripBackups,
@@ -148,7 +169,7 @@ var watchCmd = &cobra.Command{
 		ctr, err := controller.New(cfg)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to create controller: %v\n"+
-				"Note: This operation may requires root privileges (try running with 'sudo')", err)
+				"Note: This operation may requires root privileges (try running with 'sudo')\n", err)
 			os.Exit(1)
 		}
 		if err := ctr.Start(); err != nil {
@@ -167,7 +188,7 @@ func init() {
 	watchCmd.Flags().BoolVar(&watchConfig.NoPromisc, "no-promisc", false, "Don't put the interface into promiscuous mode")
 	watchCmd.Flags().StringVar(&watchConfig.File, "pcap-file", "", "Path to pcap file to read from")
 	watchCmd.Flags().StringVar(&watchConfig.Ifaces, "ifaces", "any", "Network interfaces to monitor (supports regex), 'any' for all interfaces")
-	watchCmd.Flags().StringSliceVar(&watchConfig.Protocols, "proto", nil, "Protocols to capture in 'protocol;ports[;host]' format, multiple protocols supported")
+	watchCmd.Flags().StringArrayVar(&watchConfig.Protocols, "proto", nil, "Protocols to capture in 'protocol;ports[;host]' format, multiple protocols supported")
 	watchCmd.Flags().StringVar(&watchConfig.IPVersion, "ipv", "", "Filter by IP version [v4|v6]. Defaults to both")
 	watchCmd.Flags().StringVar(&watchConfig.RoundtripFile, "roundtrips.file", "packetd.roundtrips", "Path to roundtrips file")
 	watchCmd.Flags().IntVar(&watchConfig.RoundtripSize, "roundtrips.size", 100, "Maximum size of roundtrips file in MB")
