@@ -43,7 +43,7 @@ type watchCmdConfig struct {
 type protoConfig struct {
 	Name     string
 	Protocol string
-	Ports    []int
+	Ports    []uint16
 	Host     string
 }
 
@@ -58,16 +58,12 @@ func (c *watchCmdConfig) decodeProtoConfig() []protoConfig {
 
 		var pc protoConfig
 		for _, port := range strings.Split(parts[1], ",") {
-			i, err := strconv.Atoi(port)
+			i, err := strconv.ParseUint(port, 10, 16)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "warning: Invalid port '%s' in protocol '%s', port must be an integer, skipping this port\n", port, proto)
+				fmt.Fprintf(os.Stderr, "warning: Invalid port '%s' in protocol '%s', port must be an integer between 0-65535, skipping this port\n", port, proto)
 				continue
 			}
-			if i < 1 || i > 65535 {
-				fmt.Fprintf(os.Stderr, "warning: Port '%d' in protocol '%s' is out of range (1-65535), skipping this port\n", i, proto)
-				continue
-			}
-			pc.Ports = append(pc.Ports, i)
+			pc.Ports = append(pc.Ports, uint16(i))
 		}
 
 		pc.Name = strconv.Itoa(idx)
