@@ -64,14 +64,15 @@ func (s *udpStream) Stats() Stats {
 
 // Write 执行 socket.L4Packet 写入操作
 //
-// UDP 数据包每次写入均返回链接关闭 不用等待
+// UDP 数据包没有 FIN 标识 但是也不能在收到后就 Close 否则 roundtrip 永远不会 Match
+// 因此 UDP 只靠 TTL 进行删除
 func (s *udpStream) Write(pkt socket.L4Packet, decodeFunc DecodeFunc) error {
 	seg := pkt.(*socket.UDPDatagram)
 	s.stats.ReceivedPackets++
 
 	// 无数据内容不处理
 	if len(seg.Payload) == 0 {
-		return ErrClosed
+		return nil
 	}
 
 	s.stats.ReceivedBytes += uint64(len(seg.Payload))
@@ -81,5 +82,5 @@ func (s *udpStream) Write(pkt socket.L4Packet, decodeFunc DecodeFunc) error {
 		decodeFunc(s.zb)
 	}
 
-	return ErrClosed
+	return nil
 }

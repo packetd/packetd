@@ -36,7 +36,7 @@ var agentCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		ctr, err := controller.New(cfg)
+		ctr, err := controller.New(cfg, configPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to create controller: %v\n"+
 				"Note: This operation may requires root privileges (try running with 'sudo')", err)
@@ -68,7 +68,7 @@ var agentCmd = &cobra.Command{
 				if err := ctr.Reload(cfg); err != nil {
 					logger.Errorf("failed to reload config: %v", err)
 				}
-				logger.Infof("reload (count=%d) take %s", reloadTotal, time.Since(start))
+				logger.Infof("reload count=%d, take %s", reloadTotal, time.Since(start))
 			}
 		}
 	},
