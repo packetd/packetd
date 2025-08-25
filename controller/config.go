@@ -27,7 +27,7 @@ type Config struct {
 
 	// AutoReload 是否开启自动 reload
 	AutoReload bool `config:"autoReload"`
-	
+
 	// Decoder 指定每种 decoder 解析特性
 	Decoder DecoderConfig `config:"decoder"`
 }

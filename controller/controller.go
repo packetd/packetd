@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/packetd/packetd/internal/sigs"
 	"github.com/pkg/errors"
 
 	"github.com/packetd/packetd/common"
@@ -31,6 +30,7 @@ import (
 	"github.com/packetd/packetd/internal/labels"
 	"github.com/packetd/packetd/internal/metricstorage"
 	"github.com/packetd/packetd/internal/pubsub"
+	"github.com/packetd/packetd/internal/sigs"
 	"github.com/packetd/packetd/internal/wait"
 	"github.com/packetd/packetd/logger"
 	"github.com/packetd/packetd/pipeline"
@@ -230,7 +230,7 @@ func (c *Controller) autoReload() {
 			t := getModeTime()
 			if t != updated {
 				_ = sigs.SelfReload()
-				t = updated
+				updated = t
 			}
 
 		case <-c.ctx.Done():
