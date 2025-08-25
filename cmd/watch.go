@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/packetd/packetd/confengine"
@@ -47,12 +48,13 @@ type protoConfig struct {
 	Host     string
 }
 
-func (c *watchCmdConfig) decodeProtoConfig() []protoConfig {
+func (c *watchCmdConfig) decodeProtoConfig() ([]protoConfig, []string) {
 	var pcs []protoConfig
+	var warnings []string
 	for idx, proto := range c.Protocols {
 		parts := strings.Split(proto, ";")
 		if len(parts) < 2 {
-			fmt.Fprintf(os.Stderr, "warning: Invalid protocol format '%s', expected 'protocol;ports[;host]' (e.g., 'http;80,8080;127.0.0.1'), skipping\n", proto)
+			warnings = append(warnings, "skip invalid protocol format '%s', expected 'protocol;ports[;host]' (e.g., 'http;80,8080;127.0.0.1')", proto)
 			continue
 		}
 
@@ -60,7 +62,7 @@ func (c *watchCmdConfig) decodeProtoConfig() []protoConfig {
 		for _, port := range strings.Split(parts[1], ",") {
 			i, err := strconv.ParseUint(port, 10, 16)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "warning: Invalid port '%s' in protocol '%s', port must be an integer between 0-65535, skipping this port\n", port, proto)
+				warnings = append(warnings, "skip invalid port '%s' in protocol '%s', port must be an integer between 0-65535", port, proto)
 				continue
 			}
 			pc.Ports = append(pc.Ports, uint16(i))
@@ -74,10 +76,10 @@ func (c *watchCmdConfig) decodeProtoConfig() []protoConfig {
 		}
 		pcs = append(pcs, pc)
 	}
-	return pcs
+	return pcs, warnings
 }
 
-func (c *watchCmdConfig) Yaml() []byte {
+func (c *watchCmdConfig) Yaml() ([]byte, []string, error) {
 	text := `
 controller:
 processor:
@@ -118,13 +120,12 @@ exporter:
 
 	tpl, err := template.New("Config").Parse(text)
 	if err != nil {
-		return nil
+		return nil, nil, err
 	}
 
-	ports := c.decodeProtoConfig()
+	ports, warnings := c.decodeProtoConfig()
 	if len(ports) == 0 {
-		fmt.Fprintf(os.Stderr, "error: no protocols specified, please use --proto to add protocols\n")
-		return nil
+		return nil, warnings, errors.New("no valid protocols, please use --proto to add protocols")
 	}
 
 	var buf bytes.Buffer
@@ -139,10 +140,7 @@ exporter:
 		"RoundtripSize":    c.RoundtripSize,
 		"RoundtripBackups": c.RoundtripBackups,
 	})
-	if err != nil {
-		return nil
-	}
-	return buf.Bytes()
+	return buf.Bytes(), warnings, err
 }
 
 var watchConfig watchCmdConfig
@@ -151,7 +149,16 @@ var watchCmd = &cobra.Command{
 	Use:   "watch",
 	Short: "Capture and log network traffic roundtrips",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg, err := confengine.LoadContent(watchConfig.Yaml())
+		content, warnings, err := watchConfig.Yaml()
+		for _, warn := range warnings {
+			fmt.Fprintf(os.Stderr, "warnning: %s\n", warn)
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)
+			os.Exit(1)
+		}
+
+		cfg, err := confengine.LoadContent(content)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)
 			os.Exit(1)
@@ -171,7 +178,7 @@ var watchCmd = &cobra.Command{
 		<-sigs.Terminate()
 		ctr.Stop()
 	},
-	Example: "# packetd watch --proto 'http;80,8080' --proto 'dns;53' --ifaces any --console",
+	Example: "# packetd watch --proto 'http;80,8080' --proto 'dns;53;127.0.0.1' --ifaces any --console",
 }
 
 func init() {
