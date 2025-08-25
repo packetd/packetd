@@ -48,22 +48,19 @@ type protoConfig struct {
 	Host     string
 }
 
-func (c *watchCmdConfig) decodeProtoConfig() ([]protoConfig, []string) {
+func (c *watchCmdConfig) decodeProtoConfig() ([]protoConfig, error) {
 	var pcs []protoConfig
-	var warnings []string
 	for idx, proto := range c.Protocols {
 		parts := strings.Split(proto, ";")
 		if len(parts) < 2 {
-			warnings = append(warnings, "skip invalid protocol format '%s', expected 'protocol;ports[;host]' (e.g., 'http;80,8080;127.0.0.1')", proto)
-			continue
+			return nil, errors.Errorf("invalid --proto input '%s', expected 'protocol;ports[;host]' ('http;80,8080;127.0.0.1')", proto)
 		}
 
 		var pc protoConfig
 		for _, port := range strings.Split(parts[1], ",") {
 			i, err := strconv.ParseUint(port, 10, 16)
 			if err != nil {
-				warnings = append(warnings, "skip invalid port '%s' in protocol '%s', port must be an integer between 0-65535", port, proto)
-				continue
+				return nil, errors.Errorf("invalid port '%s' in protocol '%s', port must between 0-65535", port, proto)
 			}
 			pc.Ports = append(pc.Ports, uint16(i))
 		}
@@ -76,10 +73,10 @@ func (c *watchCmdConfig) decodeProtoConfig() ([]protoConfig, []string) {
 		}
 		pcs = append(pcs, pc)
 	}
-	return pcs, warnings
+	return pcs, nil
 }
 
-func (c *watchCmdConfig) Yaml() ([]byte, []string, error) {
+func (c *watchCmdConfig) Yaml() ([]byte, error) {
 	text := `
 controller:
 processor:
@@ -120,12 +117,15 @@ exporter:
 
 	tpl, err := template.New("Config").Parse(text)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	ports, warnings := c.decodeProtoConfig()
+	ports, err := c.decodeProtoConfig()
+	if err != nil {
+		return nil, err
+	}
 	if len(ports) == 0 {
-		return nil, warnings, errors.New("no valid protocols, please use --proto to add protocols")
+		return nil, errors.New("no valid protocols, please use --proto to add protocols")
 	}
 
 	var buf bytes.Buffer
@@ -140,7 +140,7 @@ exporter:
 		"RoundtripSize":    c.RoundtripSize,
 		"RoundtripBackups": c.RoundtripBackups,
 	})
-	return buf.Bytes(), warnings, err
+	return buf.Bytes(), err
 }
 
 var watchConfig watchCmdConfig
@@ -149,10 +149,7 @@ var watchCmd = &cobra.Command{
 	Use:   "watch",
 	Short: "Capture and log network traffic roundtrips",
 	Run: func(cmd *cobra.Command, args []string) {
-		content, warnings, err := watchConfig.Yaml()
-		for _, warn := range warnings {
-			fmt.Fprintf(os.Stderr, "warnning: %s\n", warn)
-		}
+		content, err := watchConfig.Yaml()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)
 			os.Exit(1)
@@ -164,7 +161,7 @@ var watchCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		ctr, err := controller.New(cfg)
+		ctr, err := controller.New(cfg, "")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to create controller: %v\n"+
 				"Note: This operation may requires root privileges (try running with 'sudo')\n", err)

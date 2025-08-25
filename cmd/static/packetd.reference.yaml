@@ -123,6 +123,10 @@ controller.layer4Metrics:
 # 最小值为 1m
 controller.connExpired: 5m
 
+# Default: false
+# 是否在配置文件修改时自动 reload
+controller.autoReload: false
+
 # decoder 解析特性配置
 controller.decoder:
   mongodb:

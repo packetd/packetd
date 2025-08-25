@@ -280,7 +280,7 @@ func NewL7UDPConnPool(createMatcher CreateMatcherFunc, createRoundTrip CreateRou
 				createDecoder,
 			)
 		},
-		nil,
+		socket.NewTTLCache(socket.UDPTtl),
 	)
 }
 

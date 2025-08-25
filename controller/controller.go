@@ -16,9 +16,11 @@ package controller
 import (
 	"context"
 	"io"
+	"os"
 	"strconv"
 	"time"
 
+	"github.com/packetd/packetd/internal/sigs"
 	"github.com/pkg/errors"
 
 	"github.com/packetd/packetd/common"
@@ -38,9 +40,10 @@ import (
 )
 
 type Controller struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	cfg    Config
+	ctx        context.Context
+	cancel     context.CancelFunc
+	cfg        Config
+	configPath string
 
 	pl   *pipeline.Pipeline
 	exp  *exporter.Exporter
@@ -77,7 +80,7 @@ func setupLogger(conf *confengine.Config) error {
 	return nil
 }
 
-func New(conf *confengine.Config) (*Controller, error) {
+func New(conf *confengine.Config, configPath string) (*Controller, error) {
 	var cfg Config
 	if err := conf.UnpackChild("controller", &cfg); err != nil {
 		return nil, err
@@ -123,6 +126,7 @@ func New(conf *confengine.Config) (*Controller, error) {
 		ctx:            ctx,
 		cancel:         cancel,
 		cfg:            cfg,
+		configPath:     configPath,
 		pl:             pl,
 		snif:           snif,
 		pps:            pps,
@@ -149,6 +153,10 @@ func (c *Controller) Start() error {
 				logger.Errorf("failed to start server: %v", err)
 			}
 		}()
+	}
+
+	if c.cfg.AutoReload && c.configPath != "" {
+		go c.autoReload()
 	}
 
 	c.exp.Start()
@@ -200,6 +208,35 @@ func (c *Controller) Stop() {
 	c.snif.Close()
 	c.exp.Close()
 	c.cancel()
+}
+
+func (c *Controller) autoReload() {
+	ticker := time.NewTimer(30 * time.Second)
+	defer ticker.Stop()
+
+	getModeTime := func() time.Time {
+		info, err := os.Stat(c.configPath)
+		if err != nil {
+			return time.Time{}
+		}
+		return info.ModTime()
+	}
+
+	updated := getModeTime()
+
+	for {
+		select {
+		case <-ticker.C:
+			t := getModeTime()
+			if t != updated {
+				_ = sigs.SelfReload()
+				t = updated
+			}
+
+		case <-c.ctx.Done():
+			return
+		}
+	}
 }
 
 func (c *Controller) removeExpiredConn() {
