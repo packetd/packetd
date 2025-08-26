@@ -92,12 +92,6 @@ const (
 	//
 	// 因此 TIME-WAIT 状态的持续时间通常在 1 分钟到 4 分钟之间
 	TCPMsl = time.Minute
-
-	// UDPTtl UDP 数据包 TTL
-	//
-	// 实际上 UDP 没有类似 TTL 的概念 但为了保证 Matcher 最终能匹配到 Request / Response
-	// 还是需要有一个等待周期
-	UDPTtl = time.Minute
 )
 
 // Version IP 版本 v4/v6

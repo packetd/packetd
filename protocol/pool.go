@@ -72,7 +72,9 @@ type ConnPool interface {
 	ActiveConns() int
 
 	// RemoveExpired 清理超过 duration 未收到任何数据包的 Conn
-	RemoveExpired(duration time.Duration)
+	//
+	// 返回被删除的过期链接数量
+	RemoveExpired(duration time.Duration) int
 
 	// Clean 释放链接资源
 	Clean()
@@ -210,17 +212,21 @@ func (cp *connPool) ActiveConns() int {
 }
 
 // RemoveExpired 清理超过 duration 时间未有任何活跃数据包的 Conn
-func (cp *connPool) RemoveExpired(duration time.Duration) {
+func (cp *connPool) RemoveExpired(duration time.Duration) int {
 	cp.mut.Lock()
 	defer cp.mut.Unlock()
 
+	var total int
 	now := time.Now()
 	for st, conn := range cp.conns {
 		if conn.ActiveAt().Add(duration).Before(now) {
 			conn.Free()
 			delete(cp.conns, st)
+			total++
 		}
 	}
+
+	return total
 }
 
 func (cp *connPool) getConnLocked(st socket.Tuple) Conn {
@@ -280,7 +286,7 @@ func NewL7UDPConnPool(createMatcher CreateMatcherFunc, createRoundTrip CreateRou
 				createDecoder,
 			)
 		},
-		socket.NewTTLCache(socket.UDPTtl),
+		nil,
 	)
 }
 

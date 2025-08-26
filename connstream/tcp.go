@@ -78,7 +78,10 @@ func (s *tcpStream) Stats() Stats {
 }
 
 func (s *tcpStream) Write(pkt socket.L4Packet, decodeFunc DecodeFunc) error {
-	seg := pkt.(*socket.TCPSegment)
+	seg, ok := pkt.(*socket.TCPSegment)
+	if !ok {
+		return nil
+	}
 
 	// 已经关闭的数据流不允许再写入
 	if s.closed.Load() {

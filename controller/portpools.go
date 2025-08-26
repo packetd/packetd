@@ -123,10 +123,13 @@ func (pps *portPools) RangePoolStats(f func(stats connstream.TupleStats)) {
 	}
 }
 
-func (pps *portPools) RemoveExpired(duration time.Duration) {
+func (pps *portPools) RemoveExpired(duration time.Duration) map[socket.L4Proto]int {
+	count := make(map[socket.L4Proto]int)
 	for _, pool := range pps.pools {
-		pool.RemoveExpired(duration)
+		n := pool.RemoveExpired(duration)
+		count[pool.L4Proto()] = n
 	}
+	return count
 }
 
 func (pps *portPools) ActivePoolConns() map[socket.L4Proto]int {

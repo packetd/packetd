@@ -246,7 +246,8 @@ func (c *Controller) removeExpiredConn() {
 	for {
 		select {
 		case <-ticker.C:
-			c.pps.RemoveExpired(c.cfg.GetConnExpired())
+			count := c.pps.RemoveExpired(c.cfg.GetConnExpired())
+			c.updateRemoveExpired(count)
 
 		case <-c.ctx.Done():
 			return
@@ -303,7 +304,17 @@ func (c *Controller) updatePoolStats(stats connstream.TupleStats) {
 
 func (c *Controller) updateActivePoolConns(count map[socket.L4Proto]int) {
 	for k, v := range count {
-		c.metricsStorage.Update(metricstorage.NewGaugeConstMetric(string(k)+"_active_conns", float64(v), nil))
+		c.metricsStorage.Update(
+			metricstorage.NewGaugeConstMetric(string(k)+"_active_conns", float64(v), nil),
+		)
+	}
+}
+
+func (c *Controller) updateRemoveExpired(count map[socket.L4Proto]int) {
+	for k, v := range count {
+		c.metricsStorage.Update(
+			metricstorage.NewCounterConstMetric(string(k)+"_remove_expired_conns_total", float64(v), nil),
+		)
 	}
 }
 
