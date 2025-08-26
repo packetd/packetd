@@ -2,7 +2,7 @@ FROM centos:7
 
 RUN yum clean all && rm -f /var/lib/rpm/__db* && rpm --rebuilddb
 RUN curl -o /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo
-RUN yum install -y libpcap libpcap-devel git wget make gcc
+RUN yum install -y libpcap libpcap-devel git wget make gcc iproute
 
 ARG GO_VERSION=1.24.0
 
