@@ -66,7 +66,8 @@ $ make build
 # https://github.com/packetd/packetd/releases
 
 # 从 release 上选择最新的版本 比如
-$ wget https://github.com/packetd/packetd/releases/download/v0.0.3/packetd-v0.0.3-linux-amd64.tar.gz
+# version=x.y.z
+$ wget https://github.com/packetd/packetd/releases/download/${version}/packetd-v${version}-linux-amd64.tar.gz
 ```
 
 ### Run in Docker
