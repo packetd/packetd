@@ -52,8 +52,8 @@ func (c *mysqlConverter) matchLabels(req *pmysql.Request, rsp *pmysql.Response) 
 var mysqlCommMetrics = commonMetrics{
 	requestTotal:           "mysql_requests_total",
 	requestDurationSeconds: "mysql_request_duration_seconds",
-	requestBodySizeBytes:   "mysql_request_body_size_bytes",
-	responseBodySizeBytes:  "mysql_response_body_size_bytes",
+	requestBodySizeBytes:   "mysql_request_body_bytes",
+	responseBodySizeBytes:  "mysql_response_body_bytes",
 }
 
 func (c *mysqlConverter) Convert(rt socket.RoundTrip) []metricstorage.ConstMetric {

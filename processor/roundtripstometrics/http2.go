@@ -56,8 +56,8 @@ func (c *http2Converter) matchLabels(req *phttp2.Request, rsp *phttp2.Response) 
 var http2CommMetrics = commonMetrics{
 	requestTotal:           "http2_requests_total",
 	requestDurationSeconds: "http2_request_duration_seconds",
-	requestBodySizeBytes:   "http2_request_body_size_bytes",
-	responseBodySizeBytes:  "http2_response_body_size_bytes",
+	requestBodySizeBytes:   "http2_request_body_bytes",
+	responseBodySizeBytes:  "http2_response_body_bytes",
 }
 
 func (c *http2Converter) Convert(rt socket.RoundTrip) []metricstorage.ConstMetric {

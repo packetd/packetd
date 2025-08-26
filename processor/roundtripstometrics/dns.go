@@ -52,8 +52,8 @@ func (c *dnsConverter) matchLabels(req *pdns.Request, rsp *pdns.Response) labels
 var dnsCommMetrics = commonMetrics{
 	requestTotal:           "dns_requests_total",
 	requestDurationSeconds: "dns_request_duration_seconds",
-	requestBodySizeBytes:   "dns_request_body_size_bytes",
-	responseBodySizeBytes:  "dns_response_body_size_bytes",
+	requestBodySizeBytes:   "dns_request_body_bytes",
+	responseBodySizeBytes:  "dns_response_body_bytes",
 }
 
 func (c *dnsConverter) Convert(rt socket.RoundTrip) []metricstorage.ConstMetric {

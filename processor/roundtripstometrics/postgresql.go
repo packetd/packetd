@@ -58,8 +58,8 @@ func (c *postgresqlConverter) matchLabels(req *ppostgresql.Request, rsp *ppostgr
 var postgresqlCommMetrics = commonMetrics{
 	requestTotal:           "postgresql_requests_total",
 	requestDurationSeconds: "postgresql_request_duration_seconds",
-	requestBodySizeBytes:   "postgresql_request_body_size_bytes",
-	responseBodySizeBytes:  "postgresql_response_body_size_bytes",
+	requestBodySizeBytes:   "postgresql_request_body_bytes",
+	responseBodySizeBytes:  "postgresql_response_body_bytes",
 }
 
 func (c *postgresqlConverter) Convert(rt socket.RoundTrip) []metricstorage.ConstMetric {

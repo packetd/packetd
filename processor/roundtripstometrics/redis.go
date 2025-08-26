@@ -52,8 +52,8 @@ func (c *redisConverter) matchLabels(req *predis.Request, rsp *predis.Response) 
 var redisCommMetrics = commonMetrics{
 	requestTotal:           "redis_requests_total",
 	requestDurationSeconds: "redis_request_duration_seconds",
-	requestBodySizeBytes:   "redis_request_body_size_bytes",
-	responseBodySizeBytes:  "redis_response_body_size_bytes",
+	requestBodySizeBytes:   "redis_request_body_bytes",
+	responseBodySizeBytes:  "redis_response_body_bytes",
 }
 
 func (c *redisConverter) Convert(rt socket.RoundTrip) []metricstorage.ConstMetric {
