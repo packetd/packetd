@@ -10,9 +10,11 @@ RUN cd /tmp && wget https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz && rm -
 ENV PATH=$PATH:/usr/local/go/bin
 
 COPY . /packetd-project
-WORKDIR /packetd-project
 
 RUN make build
 RUN cp /packetd-project/packetd /usr/local/bin/packetd
+RUN rm -rf /packetd-project
+
+WORKDIR /
 
 ENTRYPOINT ["packetd"]

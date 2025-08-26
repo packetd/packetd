@@ -246,8 +246,8 @@ func (c *Controller) removeExpiredConn() {
 	for {
 		select {
 		case <-ticker.C:
-			count := c.pps.RemoveExpired(c.cfg.GetConnExpired())
-			c.updateRemoveExpired(count)
+			stats := c.pps.RemoveExpired(c.cfg.GetConnExpired())
+			c.updateRemoveExpired(stats)
 
 		case <-c.ctx.Done():
 			return
@@ -302,19 +302,17 @@ func (c *Controller) updatePoolStats(stats connstream.TupleStats) {
 	}
 }
 
-func (c *Controller) updateActivePoolConns(count map[socket.L4Proto]int) {
-	for k, v := range count {
-		c.metricsStorage.Update(
-			metricstorage.NewGaugeConstMetric(string(k)+"_active_conns", float64(v), nil),
-		)
+func (c *Controller) updateActivePoolConns(stats map[socket.L4Proto]int) {
+	for proto, v := range stats {
+		name := string(proto) + "_active_conns"
+		c.metricsStorage.Update(metricstorage.NewGaugeConstMetric(name, float64(v), nil))
 	}
 }
 
-func (c *Controller) updateRemoveExpired(count map[socket.L4Proto]int) {
-	for k, v := range count {
-		c.metricsStorage.Update(
-			metricstorage.NewCounterConstMetric(string(k)+"_remove_expired_conns_total", float64(v), nil),
-		)
+func (c *Controller) updateRemoveExpired(stats map[socket.L4Proto]int) {
+	for proto, v := range stats {
+		name := string(proto) + "_remove_expired_conns_total"
+		c.metricsStorage.Update(metricstorage.NewCounterConstMetric(name, float64(v), nil))
 	}
 }
 
