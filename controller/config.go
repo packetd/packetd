@@ -44,6 +44,14 @@ type DecoderConfig struct {
 }
 
 func (c DecoderConfig) Get(proto string) map[string]any {
+	m := c.get(proto)
+	if m == nil {
+		return make(map[string]any)
+	}
+	return m
+}
+
+func (c DecoderConfig) get(proto string) map[string]any {
 	switch proto {
 	case "mongodb":
 		return c.MongoDB
