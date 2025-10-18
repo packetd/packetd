@@ -15,6 +15,7 @@ package phttp
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
@@ -421,6 +422,25 @@ Content-Type: text/html; charset=UTF-8`)),
 				},
 			},
 		},
+		{
+			name: "OK with json body",
+			input: normalizeProtocol([]byte(`
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 32
+
+{"status":"success","data":{}}`)),
+			response: &Response{
+				Proto:      "HTTP/1.1",
+				Status:     "200 OK",
+				StatusCode: http.StatusOK,
+				Header: http.Header{
+					"Content-Type":   []string{"application/json"},
+					"Content-Length": []string{"32"},
+				},
+				Body: json.RawMessage(`{"status":"success","data":{}}`)},
+		},
+
 		{
 			name: "Chunked transfer-encoding",
 			input: normalizeProtocol([]byte(`

@@ -14,6 +14,7 @@
 package phttp
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -71,6 +72,7 @@ type Response struct {
 	Header     http.Header
 	Status     string
 	StatusCode int
+	Body       json.RawMessage
 	Proto      string
 	Close      bool
 	Size       int

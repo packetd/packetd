@@ -16,7 +16,9 @@ package phttp
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -66,27 +68,47 @@ const (
 // 对于一个 Stream 而言 其 role 只能为 Request / Response 二者其一
 // 因为在同一个 HTTP 连接中 通信的双方一定是有严格区分 Server/Client 端的
 type decoder struct {
-	st         socket.TupleRaw
-	serverPort socket.Port
-	role       role.Role // 记录当前 decoder 的角色
-	t0         time.Time // 记录最后一次 decode 的时间
-	rbuf       *bytes.Buffer
-
-	reqTime       time.Time // 请求接收到的时间
-	chunked       bool      // 记录当次请求是否为 chunked 模式
-	drainBytes    int       // 已经读取的 body 字节数
-	expectedBytes int       // 期待读取的 body 字节 在 chunked 模式下位 0
+	st                socket.TupleRaw
+	serverPort        socket.Port
+	role              role.Role // 记录当前 decoder 的角色
+	t0                time.Time // 记录最后一次 decode 的时间
+	rbuf              *bytes.Buffer
+	bodyBuf           bytes.Buffer // body 内容存储
+	reqTime           time.Time    // 请求接收到的时间
+	chunked           bool         // 记录当次请求是否为 chunked 模式
+	drainBytes        int          // 已经读取的 body 字节数
+	expectedBytes     int          // 期待读取的 body 字节 在 chunked 模式下位 0
+	enableBodyCapture bool         // 是否启用 body 捕获
+	maxBodySize       int          // 最大 body 捕获大小
+	captureBody       bool         // 是否捕获 body 内容, 默认不捕获
 
 	state        state
 	obj          *role.Object
 	headBodyLine []byte
 }
 
-func NewDecoder(st socket.Tuple, serverPort socket.Port, _ common.Options) protocol.Decoder {
+const maxJSONBody = 102400 // 100KB
+
+func NewDecoder(st socket.Tuple, serverPort socket.Port, options common.Options) protocol.Decoder {
+
+	// 只有开启了 body 捕获才会捕获 body
+	enableBodyCapture, err := options.GetBool("enableBody")
+	if err != nil {
+		enableBodyCapture = false
+	}
+
+	// 获取最大 body 捕获大小, 默认为 100KB
+	maxBodySize, err := options.GetInt("maxBodySize")
+	if err != nil || maxBodySize <= 0 {
+		maxBodySize = maxJSONBody
+	}
+
 	return &decoder{
-		st:         st.ToRaw(),
-		serverPort: serverPort,
-		rbuf:       bufpool.Acquire(),
+		st:                st.ToRaw(),
+		serverPort:        serverPort,
+		rbuf:              bufpool.Acquire(),
+		enableBodyCapture: enableBodyCapture,
+		maxBodySize:       maxBodySize,
 	}
 }
 
@@ -98,6 +120,62 @@ func (d *decoder) reset() {
 	d.expectedBytes = 0
 	d.chunked = false
 	d.rbuf.Reset()
+	d.captureBody = false
+	d.bodyBuf.Reset()
+	d.headBodyLine = nil
+}
+
+// afterResponseHeader 在解析完 Response Header 之后调用
+func (d *decoder) afterResponseHeader(resp *Response) {
+	if !d.enableBodyCapture {
+		d.captureBody = false
+		return
+	}
+	ct := resp.Header.Get("Content-Type")
+	if isJSONContentType(ct) {
+		d.captureBody = true
+	} else {
+		d.captureBody = false
+	}
+}
+
+func (d *decoder) appendBodyChunk(p []byte) {
+	// 如果未启用 body 捕获 则直接返回
+	if !d.enableBodyCapture {
+		return
+	}
+	if !d.captureBody || d.bodyBuf.Len() >= d.maxBodySize {
+		return
+	}
+	remain := d.maxBodySize - d.bodyBuf.Len()
+	if len(p) > remain {
+		p = p[:remain]
+	}
+	d.bodyBuf.Write(p)
+}
+
+// 归档响应时写入 JSON
+func (d *decoder) archiveResponseBody(resp *Response) {
+	if !d.enableBodyCapture {
+		return
+	}
+	// 如果不符合捕获条件 则直接返回
+	if !d.captureBody {
+		return
+	}
+	b := d.bodyBuf.Bytes()
+	// 去除尾部可能的 CRLF 与空白
+	b = bytes.TrimSpace(bytes.TrimSuffix(b, []byte("\r\n")))
+	if len(b) == 0 {
+		d.bodyBuf.Reset()
+		d.captureBody = false
+		return
+	}
+	if json.Valid(b) {
+		resp.Body = json.RawMessage(append([]byte(nil), b...))
+	}
+	d.bodyBuf.Reset()
+	d.captureBody = false
 }
 
 // archive 归档请求
@@ -119,6 +197,8 @@ func (d *decoder) archive() error {
 		obj.Host = d.st.SrcIP
 		obj.Port = d.st.SrcPort
 		obj.Chunked = d.chunked
+		d.archiveResponseBody(obj)
+
 	}
 	return nil
 }
@@ -337,6 +417,9 @@ func (d *decoder) decodeResponseHeader(line []byte) error {
 	}
 
 	d.obj = role.NewResponseObject(fromHTTTResponse(r))
+
+	resp := fromHTTTResponse(r)
+	d.afterResponseHeader(resp)
 	return nil
 }
 
@@ -412,6 +495,7 @@ func (d *decoder) drainBody(line []byte) (bool, error) {
 
 	// 非 chunked 模式下需要读取 expectedBytes 字节内容
 	if !d.chunked {
+		d.appendBodyChunk(line)
 		if d.drainBytes == d.expectedBytes {
 			if err := d.archive(); err != nil {
 				return false, err
@@ -438,6 +522,7 @@ func (d *decoder) drainBody(line []byte) (bool, error) {
 
 	// 属于正常的 data 数据 block 不做调整（可能会有偏差）
 	if len(line) > 8 {
+		d.appendBodyChunk(line)
 		return false, nil
 	}
 
@@ -507,4 +592,22 @@ func parseHexUint(v []byte) (uint64, error) {
 // checkChunkedEncoding 检查 HTTP Header 中的 Transfer-Encoding 模式是否为 chunked
 func checkChunkedEncoding(te []string) bool {
 	return len(te) > 0 && te[0] == "chunked"
+}
+
+// isJSONContentType 检查 Content-Type 是否为 JSON 格式
+func isJSONContentType(contentType string) bool {
+	ct := strings.ToLower(contentType)
+	if i := strings.Index(ct, ";"); i >= 0 {
+		ct = ct[:i]
+	}
+	ct = strings.TrimSpace(ct)
+	if strings.HasSuffix(ct, "+json") {
+		return true
+	}
+	switch ct {
+	case "application/json", "text/json":
+		return true
+	default:
+		return false
+	}
 }

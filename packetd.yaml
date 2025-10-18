@@ -17,7 +17,10 @@ controller:
 #      - "source.port"
 #      - "destination.host"
 #      - "destination.port"
-
+#  decoder:
+#    http:
+#      enableBody: true
+#      maxBodySize: 102400
 sniffer.ifaces: 'any'
 sniffer.engine: pcap
 sniffer.ipVersion: ''

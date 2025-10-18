@@ -41,6 +41,7 @@ func (c Config) GetConnExpired() time.Duration {
 
 type DecoderConfig struct {
 	MongoDB map[string]any `config:"mongodb"`
+	Http    map[string]any `config:"http"`
 }
 
 func (c DecoderConfig) Get(proto string) map[string]any {
@@ -55,6 +56,9 @@ func (c DecoderConfig) get(proto string) map[string]any {
 	switch proto {
 	case "mongodb":
 		return c.MongoDB
+	case "http":
+		return c.Http
 	}
+
 	return nil
 }
