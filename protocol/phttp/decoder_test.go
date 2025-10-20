@@ -440,7 +440,44 @@ Content-Length: 32
 				},
 				Body: json.RawMessage(`{"status":"success","data":{}}`)},
 		},
+		{
+			name: "OK with text/json body",
+			input: normalizeProtocol([]byte(`
+HTTP/1.1 200 OK
+Content-Type: text/json
+Content-Length: 27
 
+{"message":"hello world"}`)),
+			response: &Response{
+				Proto:      "HTTP/1.1",
+				Status:     "200 OK",
+				StatusCode: http.StatusOK,
+				Header: http.Header{
+					"Content-Type":   []string{"text/json"},
+					"Content-Length": []string{"27"},
+				},
+				Body: json.RawMessage(`{"message":"hello world"}`),
+			},
+		},
+		{
+			name: "OK with text/plain body",
+			input: normalizeProtocol([]byte(`
+HTTP/1.1 200 OK
+Content-Type: text/plain
+Content-Length: 15
+
+Hello, world!`)),
+			response: &Response{
+				Proto:      "HTTP/1.1",
+				Status:     "200 OK",
+				StatusCode: http.StatusOK,
+				Header: http.Header{
+					"Content-Type":   []string{"text/plain"},
+					"Content-Length": []string{"15"},
+				},
+				Body: nil,
+			},
+		},
 		{
 			name: "Chunked transfer-encoding",
 			input: normalizeProtocol([]byte(`
