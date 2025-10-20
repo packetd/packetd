@@ -87,20 +87,17 @@ type decoder struct {
 	headBodyLine []byte
 }
 
-const maxJSONBody = 102400 // 100KB
+const defaultMaxBodySize = 102400 // 100KB
 
 func NewDecoder(st socket.Tuple, serverPort socket.Port, options common.Options) protocol.Decoder {
 
 	// 只有开启了 body 捕获才会捕获 body
 	enableBodyCapture, err := options.GetBool("enableBody")
-	if err != nil {
-		enableBodyCapture = false
-	}
 
 	// 获取最大 body 捕获大小, 默认为 100KB
 	maxBodySize, err := options.GetInt("maxBodySize")
 	if err != nil || maxBodySize <= 0 {
-		maxBodySize = maxJSONBody
+		maxBodySize = defaultMaxBodySize
 	}
 
 	return &decoder{
@@ -132,11 +129,7 @@ func (d *decoder) afterResponseHeader(resp *Response) {
 		return
 	}
 	ct := resp.Header.Get("Content-Type")
-	if isJSONContentType(ct) {
-		d.captureBody = true
-	} else {
-		d.captureBody = false
-	}
+	d.captureBody = isJSONContentType(ct)
 }
 
 func (d *decoder) appendBodyChunk(p []byte) {
@@ -167,15 +160,11 @@ func (d *decoder) archiveResponseBody(resp *Response) {
 	// 去除尾部可能的 CRLF 与空白
 	b = bytes.TrimSpace(bytes.TrimSuffix(b, []byte("\r\n")))
 	if len(b) == 0 {
-		d.bodyBuf.Reset()
-		d.captureBody = false
 		return
 	}
 	if json.Valid(b) {
 		resp.Body = json.RawMessage(append([]byte(nil), b...))
 	}
-	d.bodyBuf.Reset()
-	d.captureBody = false
 }
 
 // archive 归档请求
@@ -597,17 +586,5 @@ func checkChunkedEncoding(te []string) bool {
 // isJSONContentType 检查 Content-Type 是否为 JSON 格式
 func isJSONContentType(contentType string) bool {
 	ct := strings.ToLower(contentType)
-	if i := strings.Index(ct, ";"); i >= 0 {
-		ct = ct[:i]
-	}
-	ct = strings.TrimSpace(ct)
-	if strings.HasSuffix(ct, "+json") {
-		return true
-	}
-	switch ct {
-	case "application/json", "text/json":
-		return true
-	default:
-		return false
-	}
+	return strings.Contains(ct, "application/json") || strings.Contains(ct, "text/json")
 }
