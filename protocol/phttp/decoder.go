@@ -92,7 +92,7 @@ const defaultMaxBodySize = 102400 // 100KB
 func NewDecoder(st socket.Tuple, serverPort socket.Port, options common.Options) protocol.Decoder {
 
 	// 只有开启了 body 捕获才会捕获 body
-	enableBodyCapture, err := options.GetBool("enableBody")
+	enableBodyCapture, _ := options.GetBool("enableBody")
 
 	// 获取最大 body 捕获大小, 默认为 100KB
 	maxBodySize, err := options.GetInt("maxBodySize")
