@@ -567,7 +567,7 @@ func (d *decoder) decideContentLength() int {
 	return d.drainBytes
 }
 
-// isJSONContentType 检查 Content-Type 是否为 JSON 格式
+// detectAndSetBodyType 根据 Content-Type 探测 body 类型, 并设置 bodyType 字段
 func (d *decoder) detectAndSetBodyType(contentType string) {
 	ct := strings.ToLower(contentType)
 	if strings.Contains(ct, "application/json") || strings.Contains(ct, "text/json") {
