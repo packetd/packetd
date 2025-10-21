@@ -60,6 +60,11 @@ const (
 	stateDecodeBody
 )
 
+const (
+	jsonBodyType = "json"
+	textBodyType = "text"
+)
+
 // decoder HTTP1.1 协议解析器
 //
 // decoder 利用了 http.ReadRequest / http.ReadResponse 方法对协议的 Protocol 以及 Header 进行解析
@@ -78,6 +83,7 @@ type decoder struct {
 	chunked           bool         // 记录当次请求是否为 chunked 模式
 	drainBytes        int          // 已经读取的 body 字节数
 	expectedBytes     int          // 期待读取的 body 字节 在 chunked 模式下位 0
+	bodyType          string       // body 类型
 	enableBodyCapture bool         // 是否启用 body 捕获
 	maxBodySize       int          // 最大 body 捕获大小
 	captureBody       bool         // 是否捕获 body 内容, 默认不捕获
@@ -92,7 +98,7 @@ const defaultMaxBodySize = 102400 // 100KB
 func NewDecoder(st socket.Tuple, serverPort socket.Port, options common.Options) protocol.Decoder {
 
 	// 只有开启了 body 捕获才会捕获 body
-	enableBodyCapture, _ := options.GetBool("enableBody")
+	enableBodyCapture, _ := options.GetBool("enableBodyCapture")
 
 	// 获取最大 body 捕获大小, 默认为 100KB
 	maxBodySize, err := options.GetInt("maxBodySize")
@@ -120,6 +126,7 @@ func (d *decoder) reset() {
 	d.captureBody = false
 	d.bodyBuf.Reset()
 	d.headBodyLine = nil
+	d.bodyType = ""
 }
 
 // afterResponseHeader 在解析完 Response Header 之后调用
@@ -129,7 +136,7 @@ func (d *decoder) afterResponseHeader(resp *Response) {
 		return
 	}
 	ct := resp.Header.Get("Content-Type")
-	d.captureBody = isJSONContentType(ct)
+	d.detectAndSetBodyType(ct)
 }
 
 func (d *decoder) appendBodyChunk(p []byte) {
@@ -162,9 +169,18 @@ func (d *decoder) archiveResponseBody(resp *Response) {
 	if len(b) == 0 {
 		return
 	}
-	if json.Valid(b) {
-		resp.Body = json.RawMessage(append([]byte(nil), b...))
+
+	switch d.bodyType {
+	case jsonBodyType:
+		if json.Valid(b) {
+			resp.Body = json.RawMessage(append([]byte(nil), b...))
+		} else {
+			resp.Body = string(b)
+		}
+	case textBodyType:
+		resp.Body = string(b)
 	}
+
 }
 
 // archive 归档请求
@@ -551,6 +567,19 @@ func (d *decoder) decideContentLength() int {
 	return d.drainBytes
 }
 
+// isJSONContentType 检查 Content-Type 是否为 JSON 格式
+func (d *decoder) detectAndSetBodyType(contentType string) {
+	ct := strings.ToLower(contentType)
+	if strings.Contains(ct, "application/json") || strings.Contains(ct, "text/json") {
+		d.bodyType = jsonBodyType
+		d.captureBody = true
+	}
+	if strings.Contains(ct, "text/plain") || strings.Contains(ct, "text/html") {
+		d.bodyType = textBodyType
+		d.captureBody = true
+	}
+}
+
 // parseHexUint 将 16 进制所代表的字节解析成 uint64 数据类型
 func parseHexUint(v []byte) (uint64, error) {
 	if len(v) == 0 {
@@ -581,10 +610,4 @@ func parseHexUint(v []byte) (uint64, error) {
 // checkChunkedEncoding 检查 HTTP Header 中的 Transfer-Encoding 模式是否为 chunked
 func checkChunkedEncoding(te []string) bool {
 	return len(te) > 0 && te[0] == "chunked"
-}
-
-// isJSONContentType 检查 Content-Type 是否为 JSON 格式
-func isJSONContentType(contentType string) bool {
-	ct := strings.ToLower(contentType)
-	return strings.Contains(ct, "application/json") || strings.Contains(ct, "text/json")
 }

@@ -396,9 +396,11 @@ Host: options.example.com`)),
 
 func TestDecodeResponse(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    []byte
-		response *Response
+		name              string
+		enableBodyCapture bool
+		maxBodySize       int
+		input             []byte
+		response          *Response
 	}{
 		{
 			name: "OK response",
@@ -423,7 +425,8 @@ Content-Type: text/html; charset=UTF-8`)),
 			},
 		},
 		{
-			name: "OK with json body",
+			name:              "OK with json body",
+			enableBodyCapture: true,
 			input: normalizeProtocol([]byte(`
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -441,7 +444,8 @@ Content-Length: 32
 				Body: json.RawMessage(`{"status":"success","data":{}}`)},
 		},
 		{
-			name: "OK with text/json body",
+			name:              "OK with text/json body",
+			enableBodyCapture: true,
 			input: normalizeProtocol([]byte(`
 HTTP/1.1 200 OK
 Content-Type: text/json
@@ -460,7 +464,29 @@ Content-Length: 27
 			},
 		},
 		{
-			name: "OK with text/plain body",
+			name:              "OK with small json body limit",
+			enableBodyCapture: true,
+			maxBodySize:       5,
+			input: normalizeProtocol([]byte(`
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 32
+
+{"status":"success","data":{}}`)),
+			response: &Response{
+				Proto:      "HTTP/1.1",
+				Status:     "200 OK",
+				StatusCode: http.StatusOK,
+				Header: http.Header{
+					"Content-Type":   []string{"application/json"},
+					"Content-Length": []string{"32"},
+				},
+				Body: `{"sta`,
+			},
+		},
+		{
+			name:              "OK with text/plain body",
+			enableBodyCapture: true,
 			input: normalizeProtocol([]byte(`
 HTTP/1.1 200 OK
 Content-Type: text/plain
@@ -475,7 +501,7 @@ Hello, world!`)),
 					"Content-Type":   []string{"text/plain"},
 					"Content-Length": []string{"15"},
 				},
-				Body: nil,
+				Body: "Hello, world!",
 			},
 		},
 		{
@@ -669,7 +695,14 @@ X-Custom: second`)),
 	var t0 time.Time
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := NewDecoder(st, 0, common.NewOptions())
+			defOpts := common.NewOptions()
+			if tt.enableBodyCapture {
+				defOpts["enableBodyCapture"] = true
+			}
+			if tt.maxBodySize > 0 {
+				defOpts["maxBodySize"] = tt.maxBodySize
+			}
+			d := NewDecoder(st, 0, defOpts)
 			objs, err := d.Decode(zerocopy.NewBuffer(tt.input), t0)
 			assert.NoError(t, err)
 
@@ -678,6 +711,7 @@ X-Custom: second`)),
 			assert.Equal(t, tt.response.Status, req.Status)
 			assert.Equal(t, tt.response.Close, req.Close)
 			assert.Equal(t, tt.response.Header, req.Header)
+			assert.Equal(t, tt.response.Body, req.Body)
 		})
 	}
 }
