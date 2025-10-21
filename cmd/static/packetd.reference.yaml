@@ -136,6 +136,16 @@ controller.decoder:
     # 建议按需开启
     enableResponseCode: false
 
+  http:
+    # Default: false
+    # enableBodyCapture 是否启用 HTTP Body 捕获功能
+    enableBodyCapture: false
+
+    # Default: 102400(Bytes)
+    # maxBodySize 指定单个 HTTP Body 最大捕获大小 超过该大小的 Body 将被截断，json 被截断之后将退化为字符串类型
+    # 目前支持捕获 application/json, text/json, text/plain, text/html 类型的 Body
+    maxBodySize: 102400
+
 
 # ========== metricsStorage configuration ==========
 #
