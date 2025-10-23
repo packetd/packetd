@@ -16,7 +16,9 @@ package phttp
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -58,6 +60,11 @@ const (
 	stateDecodeBody
 )
 
+const (
+	jsonBodyType = "json"
+	textBodyType = "text"
+)
+
 // decoder HTTP1.1 协议解析器
 //
 // decoder 利用了 http.ReadRequest / http.ReadResponse 方法对协议的 Protocol 以及 Header 进行解析
@@ -66,27 +73,45 @@ const (
 // 对于一个 Stream 而言 其 role 只能为 Request / Response 二者其一
 // 因为在同一个 HTTP 连接中 通信的双方一定是有严格区分 Server/Client 端的
 type decoder struct {
-	st         socket.TupleRaw
-	serverPort socket.Port
-	role       role.Role // 记录当前 decoder 的角色
-	t0         time.Time // 记录最后一次 decode 的时间
-	rbuf       *bytes.Buffer
-
-	reqTime       time.Time // 请求接收到的时间
-	chunked       bool      // 记录当次请求是否为 chunked 模式
-	drainBytes    int       // 已经读取的 body 字节数
-	expectedBytes int       // 期待读取的 body 字节 在 chunked 模式下位 0
+	st                socket.TupleRaw
+	serverPort        socket.Port
+	role              role.Role // 记录当前 decoder 的角色
+	t0                time.Time // 记录最后一次 decode 的时间
+	rbuf              *bytes.Buffer
+	bodyBuf           bytes.Buffer // body 内容存储
+	reqTime           time.Time    // 请求接收到的时间
+	chunked           bool         // 记录当次请求是否为 chunked 模式
+	drainBytes        int          // 已经读取的 body 字节数
+	expectedBytes     int          // 期待读取的 body 字节 在 chunked 模式下位 0
+	bodyType          string       // body 类型
+	enableBodyCapture bool         // 是否启用 body 捕获
+	maxBodySize       int          // 最大 body 捕获大小
+	captureBody       bool         // 是否捕获 body 内容, 默认不捕获
 
 	state        state
 	obj          *role.Object
 	headBodyLine []byte
 }
 
-func NewDecoder(st socket.Tuple, serverPort socket.Port, _ common.Options) protocol.Decoder {
+const defaultMaxBodySize = 102400 // 100KB
+
+func NewDecoder(st socket.Tuple, serverPort socket.Port, options common.Options) protocol.Decoder {
+
+	// 只有开启了 body 捕获才会捕获 body
+	enableBodyCapture, _ := options.GetBool("enableBodyCapture")
+
+	// 获取最大 body 捕获大小, 默认为 100KB
+	maxBodySize, err := options.GetInt("maxBodySize")
+	if err != nil || maxBodySize <= 0 {
+		maxBodySize = defaultMaxBodySize
+	}
+
 	return &decoder{
-		st:         st.ToRaw(),
-		serverPort: serverPort,
-		rbuf:       bufpool.Acquire(),
+		st:                st.ToRaw(),
+		serverPort:        serverPort,
+		rbuf:              bufpool.Acquire(),
+		enableBodyCapture: enableBodyCapture,
+		maxBodySize:       maxBodySize,
 	}
 }
 
@@ -98,6 +123,64 @@ func (d *decoder) reset() {
 	d.expectedBytes = 0
 	d.chunked = false
 	d.rbuf.Reset()
+	d.captureBody = false
+	d.bodyBuf.Reset()
+	d.headBodyLine = nil
+	d.bodyType = ""
+}
+
+// afterResponseHeader 在解析完 Response Header 之后调用
+func (d *decoder) afterResponseHeader(resp *Response) {
+	if !d.enableBodyCapture {
+		d.captureBody = false
+		return
+	}
+	ct := resp.Header.Get("Content-Type")
+	d.detectAndSetBodyType(ct)
+}
+
+func (d *decoder) appendBodyChunk(p []byte) {
+	// 如果未启用 body 捕获 则直接返回
+	if !d.enableBodyCapture {
+		return
+	}
+	if !d.captureBody || d.bodyBuf.Len() >= d.maxBodySize {
+		return
+	}
+	remain := d.maxBodySize - d.bodyBuf.Len()
+	if len(p) > remain {
+		p = p[:remain]
+	}
+	d.bodyBuf.Write(p)
+}
+
+// 归档响应时写入 JSON
+func (d *decoder) archiveResponseBody(resp *Response) {
+	if !d.enableBodyCapture {
+		return
+	}
+	// 如果不符合捕获条件 则直接返回
+	if !d.captureBody {
+		return
+	}
+	b := d.bodyBuf.Bytes()
+	// 去除尾部可能的 CRLF 与空白
+	b = bytes.TrimSpace(bytes.TrimSuffix(b, []byte("\r\n")))
+	if len(b) == 0 {
+		return
+	}
+
+	switch d.bodyType {
+	case jsonBodyType:
+		if json.Valid(b) {
+			resp.Body = json.RawMessage(append([]byte(nil), b...))
+		} else {
+			resp.Body = string(b)
+		}
+	case textBodyType:
+		resp.Body = string(b)
+	}
+
 }
 
 // archive 归档请求
@@ -119,6 +202,8 @@ func (d *decoder) archive() error {
 		obj.Host = d.st.SrcIP
 		obj.Port = d.st.SrcPort
 		obj.Chunked = d.chunked
+		d.archiveResponseBody(obj)
+
 	}
 	return nil
 }
@@ -337,6 +422,9 @@ func (d *decoder) decodeResponseHeader(line []byte) error {
 	}
 
 	d.obj = role.NewResponseObject(fromHTTTResponse(r))
+
+	resp := fromHTTTResponse(r)
+	d.afterResponseHeader(resp)
 	return nil
 }
 
@@ -412,6 +500,7 @@ func (d *decoder) drainBody(line []byte) (bool, error) {
 
 	// 非 chunked 模式下需要读取 expectedBytes 字节内容
 	if !d.chunked {
+		d.appendBodyChunk(line)
 		if d.drainBytes == d.expectedBytes {
 			if err := d.archive(); err != nil {
 				return false, err
@@ -438,6 +527,7 @@ func (d *decoder) drainBody(line []byte) (bool, error) {
 
 	// 属于正常的 data 数据 block 不做调整（可能会有偏差）
 	if len(line) > 8 {
+		d.appendBodyChunk(line)
 		return false, nil
 	}
 
@@ -475,6 +565,19 @@ func (d *decoder) decideContentLength() int {
 		return int(n)
 	}
 	return d.drainBytes
+}
+
+// detectAndSetBodyType 根据 Content-Type 探测 body 类型, 并设置 bodyType 字段
+func (d *decoder) detectAndSetBodyType(contentType string) {
+	ct := strings.ToLower(contentType)
+	if strings.Contains(ct, "application/json") || strings.Contains(ct, "text/json") {
+		d.bodyType = jsonBodyType
+		d.captureBody = true
+	}
+	if strings.Contains(ct, "text/plain") || strings.Contains(ct, "text/html") {
+		d.bodyType = textBodyType
+		d.captureBody = true
+	}
 }
 
 // parseHexUint 将 16 进制所代表的字节解析成 uint64 数据类型

@@ -71,6 +71,7 @@ type Response struct {
 	Header     http.Header
 	Status     string
 	StatusCode int
+	Body       interface{}
 	Proto      string
 	Close      bool
 	Size       int
